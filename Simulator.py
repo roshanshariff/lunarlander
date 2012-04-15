@@ -155,9 +155,9 @@ class LunarLanderSimulator:
             return ([x, y] - self.image_center) * self.lander_width
 
         def leg (x, y, strut_dir):
-            strength = 4.0e4
+            strength = 5.0e4
             shear = strength * 4/10
-            return Collider (pos=image_coords(x,y), mu_s=2.0, mu_k=1.5,
+            return Collider (pos=image_coords(x,y), mu_s=1.1, mu_k=1.0,
                              normal_dir=strut_dir, strength=strength, shear=shear)
 
         def body (x, y):
