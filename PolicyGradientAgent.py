@@ -83,14 +83,14 @@ class PolicyGradientAgent:
         if not terminal:
             self.take_action (features, xsign)
 
-    def save_state (self, savefile='saved_state.npy'):
+    def save_state (self, savefile='data/saved_state.npy'):
         np.save (savefile, np.vstack ((self.value_critic.value,
                                        self.thrust_actor.action_mean,
                                        self.thrust_actor.action_stdev,
                                        self.rcs_actor.action_mean,
                                        self.rcs_actor.action_stdev)))
 
-    def load_state (self, savefile='saved_state.npy', mmap_mode=None):
+    def load_state (self, savefile='data/saved_state.npy', mmap_mode=None):
         (self.value_critic.value,
          self.thrust_actor.action_mean,
          self.thrust_actor.action_stdev,
