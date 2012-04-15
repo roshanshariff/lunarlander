@@ -4,7 +4,7 @@ import math
 
 class Collider:
 
-    def __init__ (self, pos, mu_s, mu_k, normal_dir, strength, shear):
+    def __init__ (self, pos, normal_dir, strength, shear):
         self.pos = np.array(pos, dtype=np.float64)
         self.mu_s = float(mu_s)
         self.mu_k = float(mu_k)
@@ -16,7 +16,7 @@ class Collider:
 
 class RigidBody:
 
-    def __init__ (self, mass, mom_inertia, restitution=0.0, colliders=[]):
+    def __init__ (self, mass, mom_inertia, mu_s=0.0, mu_k=0.0, restitution=0.0, colliders=[]):
 
         self.pos = np.zeros (2)
         self.vel = np.zeros (2)
@@ -26,18 +26,15 @@ class RigidBody:
         self.mass = float(mass)
         self.mom_inertia = float(mom_inertia)
         self.restitution = float(restitution)
+        self.mu_s = float(mu_s)
+        self.mu_k = float(mu_k)
 
-        self.bounding_radius = max([np.linalg.norm(c.pos) for c in colliders])
+        self.colliders = np.array (colliders, dtype=[('pos', np.float64, 2), ('strength', np.float64, (2,2))])
+        self.bounding_radius = max ([ np.linalg.norm(c['pos']) for c in self.colliders ])
 
-        self.num_colliders = len(colliders)
-        self.colliders_pos = np.array([c.pos for c in colliders]).T
-        self.colliders_mu_s = np.array([c.mu_s for c in colliders])
-        self.colliders_mu_k = np.array([c.mu_k for c in colliders])
-        self.colliders_strength = np.array([c.strength for c in colliders])
-
-        self.collided = np.zeros(self.num_colliders, dtype=np.bool)
-        self.contacted = np.zeros(self.num_colliders, dtype=np.bool)
-        self.impulses = np.zeros((2,self.num_colliders))
+        self.collided = np.zeros_like (self.colliders, dtype=np.bool)
+        self.contacted = np.zeros_like (self.colliders, dtype=np.bool)
+        self.impulses = np.zeros_like (self.colliders['pos'])
         self.breakage = 0.0
 
     def apply_impulse (self, position, impulse):
@@ -49,46 +46,47 @@ class RigidBody:
         sin_rot = math.sin(self.rot)
         cos_rot = math.cos(self.rot)
         colliders_dpos_dtheta = np.dot([[-sin_rot, -cos_rot], [cos_rot, -sin_rot]],
-                                       self.colliders_pos)
+                                       self.colliders['pos'].T).T
 
         def process_collision (restitution):
 
             new_pos = self.pos + dt*(self.vel + dt*force/self.mass)
             new_rot = self.rot + dt*(self.rot_vel + dt*torque/self.mom_inertia)
 
-            collided = np.zeros(self.num_colliders, dtype=np.bool)
+            collided = np.zeros_like (self.colliders, dtype=np.bool)
             if new_pos[1] > self.bounding_radius: return collided
 
             sin_new_rot = math.sin(new_rot)
             cos_new_rot = math.cos(new_rot)
             colliders_rel_pos = np.dot([[cos_new_rot, -sin_new_rot], [sin_new_rot, cos_new_rot]],
-                                       self.colliders_pos)
+                                       self.colliders['pos'].T).T
 
-            for i in np.argsort(colliders_rel_pos[1,:]):
+            for i in np.argsort(colliders_rel_pos[:,1]):
 
-                if new_pos[1] + colliders_rel_pos[1,i] > 0: break
+                if new_pos[1] + colliders_rel_pos[i,1] > 0: break
 
-                collider_vel = self.vel + self.rot_vel*colliders_dpos_dtheta[:,i]
+                collider_vel = self.vel + self.rot_vel*colliders_dpos_dtheta[i]
                 if collider_vel[1] > 0: continue
 
-                K = np.array([colliders_rel_pos[1,i], -colliders_rel_pos[0,i]])
+                K = np.array([colliders_rel_pos[i,1], -colliders_rel_pos[i,0]])
                 K = np.outer(K,K)
                 K /= self.mom_inertia
                 K += np.eye(2)/self.mass
 
                 impulse = np.linalg.solve(K, [-collider_vel[0], -(1+restitution)*collider_vel[1]])
+                print self.mu_s, self.mu_k
 
-                if abs(impulse[0]) > self.colliders_mu_s[i]*impulse[1]:
-                    friction = self.colliders_mu_k[i]
+                if abs(impulse[0]) > self.mu_s*impulse[1]:
+                    friction = self.mu_k
                     if collider_vel[0] > 0: friction = -friction
                     impulse[1] = -(1+restitution) * collider_vel[1] / (friction*K[1,0] + K[1,1])
                     impulse[0] = impulse[1] * friction
 
-                self.apply_impulse (colliders_rel_pos[:,i], impulse)
+                self.apply_impulse (colliders_rel_pos[i], impulse)
                 collided[i] = True
 
-                self.impulses[:,i] += np.dot([[cos_new_rot, sin_new_rot], [-sin_new_rot, cos_new_rot]],
-                                             impulse)
+                self.impulses[i] += np.dot([[cos_new_rot, sin_new_rot], [-sin_new_rot, cos_new_rot]],
+                                           impulse)
 
             return collided
 
@@ -118,10 +116,9 @@ class RigidBody:
         self.rot += dt * self.rot_vel
 
         # Breakage
-        for i in xrange(self.num_colliders):
-            breakage = np.linalg.norm (np.dot (self.colliders_strength[i], self.impulses[:,i]))
+        for (i, c) in enumerate(self.colliders):
+            breakage = np.linalg.norm (np.dot (c['strength'], self.impulses[i]))
             self.breakage = max (self.breakage, breakage)
-
 
 class LunarLanderSimulator:
 
@@ -137,6 +134,8 @@ class LunarLanderSimulator:
         mass = 11036.4 # kg
         mom_inertia = 28258.7 # kg m^2
         restitution = 0.2
+        mu_s = 1.1
+        mu_k = 1.0
 
         rcs_img_pos_y = 0.5508 # Y coordinate of RCS thrusters in image
         rcs_ref_pos_y = 6.4516 # Y coordinate of RCS thrusters in LM coords
@@ -157,14 +156,16 @@ class LunarLanderSimulator:
         def leg (x, y, strut_dir):
             strength = 5.0e4
             shear = strength * 4/10
-            return Collider (pos=image_coords(x,y), mu_s=1.1, mu_k=1.0,
-                             normal_dir=strut_dir, strength=strength, shear=shear)
+            cos_dir = math.cos(strut_dir)
+            sin_dir = math.sin(strut_dir)
+            strength_mat = np.matrix([[ cos_dir/strength, sin_dir/strength],
+                                      [-sin_dir/shear,    cos_dir/shear   ]])        
+            return (image_coords(x,y), strength_mat)
 
         def body (x, y):
-            return Collider (pos=image_coords(x,y), mu_s=1.0, mu_k=1.0,
-                             normal_dir=0.0, strength=1.0, shear=1.0)
+            return (image_coords(x,y), np.eye(2))
         
-        self.lander = RigidBody (mass, mom_inertia, restitution,
+        self.lander = RigidBody (mass, mom_inertia, mu_s, mu_k, restitution,
                                  [ leg  (0.0541, 0.0456, math.pi/3),   # left leg bottom
                                    leg  (0.9459, 0.0456, math.pi*2/3), # right leg bottom
                                    leg  (0.0000, 0.0627, math.pi/3),   # left leg outer
@@ -187,7 +188,7 @@ class LunarLanderSimulator:
 
     def initialize (self, pos_x=0.0, pos_y=0.0, rot=0.0, vel_x=0.0, vel_y=0.0, rot_vel=0.0):
 
-        min_pos_y = -np.min(np.dot([math.sin(rot), math.cos(rot)], self.lander.colliders_pos))
+        min_pos_y = -np.min(np.dot([math.sin(rot), math.cos(rot)], self.lander.colliders['pos'].T))
 
         self.lander.pos[0] = pos_x
         self.lander.pos[1] = max(pos_y, min_pos_y)
@@ -198,6 +199,7 @@ class LunarLanderSimulator:
         self.lander.rot_vel = float(rot_vel)
 
         self.lander.breakage = 0.0
+        self.crashed = False
         self.thrust = 0.0
         self.rcs = 0.0
         self.update()
@@ -208,7 +210,7 @@ class LunarLanderSimulator:
                            self.thrust*math.cos(self.lander.rot) - self.gravity])
 
         self.lander.update(self.dt, accel*self.lander.mass, self.rcs*self.lander.mom_inertia)
-        self.crashed = self.lander.breakage > 1.0
+        self.crashed |= self.lander.breakage > 1.0
         self.landed = np.all(self.lander.contacted[:2]) and np.linalg.norm(self.lander.vel) < 0.1
 
         #print self.lander.impulses[:,0] + self.lander.impulses[:,1]

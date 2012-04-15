@@ -179,7 +179,7 @@ class LunarLanderWindow (pyglet.window.Window):
     def push_camera_projection (self):
 
         lander_width = self.scaleFactor * self.simulator.lander_width
-        lander_height = self.scaleFactor * -self.simulator.lander.colliders_pos[1,:].min()
+        lander_height = self.scaleFactor * -self.simulator.lander.colliders['pos'][1].min()
 
         (pad_x, pad_y) = (0.0, lander_height)
         (lander_x, lander_y) = self.scaleFactor * self.simulator.lander.pos
