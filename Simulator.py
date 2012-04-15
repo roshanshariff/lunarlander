@@ -37,7 +37,8 @@ class RigidBody:
 
         self.collided = np.zeros(self.num_colliders, dtype=np.bool)
         self.contacted = np.zeros(self.num_colliders, dtype=np.bool)
-        self.breakage = np.zeros(self.num_colliders)
+        self.impulses = np.zeros((2,self.num_colliders))
+        self.breakage = 0.0
 
     def apply_impulse (self, position, impulse):
         self.vel += impulse / self.mass
@@ -86,16 +87,13 @@ class RigidBody:
                 self.apply_impulse (colliders_rel_pos[:,i], impulse)
                 collided[i] = True
 
-                breakage = np.dot(self.colliders_strength[i],
-                                  np.dot([[ cos_new_rot, sin_new_rot],
-                                          [-sin_new_rot, cos_new_rot]],
-                                         impulse))
-                self.breakage[i] = max (self.breakage[i], np.linalg.norm(breakage))
+                self.impulses[:,i] += np.dot([[cos_new_rot, sin_new_rot], [-sin_new_rot, cos_new_rot]],
+                                             impulse)
 
             return collided
 
         # Collision
-        self.breakage.fill(0.0)
+        self.impulses.fill(0.0)
         self.collided.fill(False)
         for i in xrange(10):
             collided = process_collision(self.restitution)
@@ -118,6 +116,11 @@ class RigidBody:
         # Position update
         self.pos += dt * self.vel
         self.rot += dt * self.rot_vel
+
+        # Breakage
+        for i in xrange(self.num_colliders):
+            breakage = np.linalg.norm (np.dot (self.colliders_strength[i], self.impulses[:,i]))
+            self.breakage = max (self.breakage, breakage)
 
 
 class LunarLanderSimulator:
@@ -152,9 +155,9 @@ class LunarLanderSimulator:
             return ([x, y] - self.image_center) * self.lander_width
 
         def leg (x, y, strut_dir):
-            strength = 5.0e5
-            shear = strength / 8.0
-            return Collider (pos=image_coords(x,y), mu_s=1.0, mu_k=0.9,
+            strength = 4.0e4
+            shear = strength * 4/10
+            return Collider (pos=image_coords(x,y), mu_s=2.0, mu_k=1.5,
                              normal_dir=strut_dir, strength=strength, shear=shear)
 
         def body (x, y):
@@ -162,10 +165,10 @@ class LunarLanderSimulator:
                              normal_dir=0.0, strength=1.0, shear=1.0)
         
         self.lander = RigidBody (mass, mom_inertia, restitution,
-                                 [ leg  (0.0541, 0.0456, math.pi/2),   # left leg bottom
-                                   leg  (0.9459, 0.0456, math.pi/2), # right leg bottom
-                                   leg  (0.0000, 0.0627, math.pi/2),   # left leg outer
-                                   leg  (1.0000, 0.0626, math.pi/2), # right leg outer
+                                 [ leg  (0.0541, 0.0456, math.pi/3),   # left leg bottom
+                                   leg  (0.9459, 0.0456, math.pi*2/3), # right leg bottom
+                                   leg  (0.0000, 0.0627, math.pi/3),   # left leg outer
+                                   leg  (1.0000, 0.0626, math.pi*2/3), # right leg outer
                                    body (0.2251, 0.6980),
                                    body (0.4729, 0.8348),
                                    body (0.6211, 0.6809),
@@ -194,9 +197,9 @@ class LunarLanderSimulator:
         self.lander.vel[1] = vel_y
         self.lander.rot_vel = float(rot_vel)
 
+        self.lander.breakage = 0.0
         self.thrust = 0.0
         self.rcs = 0.0
-        self.breakage = 0.0
         self.update()
 
     def update (self):
@@ -205,10 +208,11 @@ class LunarLanderSimulator:
                            self.thrust*math.cos(self.lander.rot) - self.gravity])
 
         self.lander.update(self.dt, accel*self.lander.mass, self.rcs*self.lander.mom_inertia)
-
-        self.breakage = max (self.breakage, np.max(self.lander.breakage))
-        self.crashed = self.breakage > 1.0
+        self.crashed = self.lander.breakage > 1.0
         self.landed = np.all(self.lander.contacted[:2]) and np.linalg.norm(self.lander.vel) < 0.1
+
+        #print self.lander.impulses[:,0] + self.lander.impulses[:,1]
+        #if self.crashed: print self.lander.breakage
         
     def set_action (self, thrust, rcs):
         self.thrust = max (0, min (self.max_thrust, thrust))
