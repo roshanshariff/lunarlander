@@ -16,8 +16,8 @@ class PolicyGradientAgent:
 
         # TODO Set max_stdev in a more principled way
         self.value_critic = Critic (self.tile_coder, Lambda, alpha_v, value=0.0)
-        self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=1.0, mean=1.0, stdev=0.5)
-        self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_v, max_stdev=1.0, mean=0.0, stdev=0.5)
+        self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=simulator.max_thrust/4, mean=1.0, stdev=simulator.max_thrust/8)
+        self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_v, max_stdev=simulator.max_rcs/2, mean=0.0, stdev=simulator.max_rcs/4)
 
         self.initialize()
 
@@ -26,9 +26,9 @@ class PolicyGradientAgent:
         state_doubled = np.array([0, 0, 1, 1, 0, 1])
         state_bounded = np.array([1, 1, 1, 1, 0, 1])
 
-        cell_size = np.array([5., 5., 5., 5., math.pi/2, math.pi/4])
-        num_cells = np.array([6,  4,  4,   4,         4,         4])
-        num_samples = np.array([2, 2, 4, 4, 4, 4])
+        cell_size = np.array   ([5., 5., 2., 2., math.pi/2, math.pi/4])
+        num_cells = np.array   ([6,  4,  4,  4,          4,         4])
+        num_samples = np.array ([2,  2,  4,  4,          8,         4])
 
         self.max_state = (cell_size * num_cells) - 1e-10
         self.min_state = -self.max_state*state_doubled
