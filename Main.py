@@ -18,24 +18,3 @@ def manual_control ():
 def visualize ():
     import Display
     window = Display.LunarLanderWindow (framework)
-
-def do_training (num_episodes, seed=None):
-    if seed != None: np.random.seed (seed)
-    for i in xrange(num_episodes):
-        framework.run()
-        print 'Return =', framework.Return
-
-def mp_training (num_episodes, num_processes=mp.cpu_count()):
-
-    pool = mp.Pool(num_processes)
-    results = []
-
-    while num_episodes > 0:
-        batch_size = 1 + (num_episodes-1)/num_processes
-        results.append (pool.apply_async (do_training, [batch_size, np.random.randint(sys.maxint)]))
-        num_episodes -= batch_size
-        num_processes -= 1
-
-    for r in results: r.get()
-    pool.close()
-    pool.join()

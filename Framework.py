@@ -1,5 +1,8 @@
 import numpy as np
+import multiprocessing as mp
+import ctypes
 import math
+import sys
 
 class Framework:
 
@@ -59,19 +62,35 @@ class Framework:
         return True
 
     def reward (self):
-        reward = -0.01 * self.simulator.main_throttle()
+        reward = 0.0
         if self.simulator.crashed or self.simulator.landed:
             reward -= abs(self.simulator.lander.pos[0]) / self.simulator.lander_width
+        if not self.simulator.landed:
+            reward -= math.log10(1+self.simulator.lander.breakage)
+            self.simulator.lander.breakage = 0.0
         if self.simulator.crashed:
-            reward -= 1.0 + math.log10(self.simulator.lander.breakage)
+            reward -= 1.0
+        #if reward != 0.0: print 'Reward =', reward
+        reward -= -0.01 * self.simulator.main_throttle()
         return reward
 
-    # def reward (self): 
-    #     reward = -0.01*self.simulator.main_throttle()
-    #     if self.simulator.crashed:
-    #         breakage = self.simulator.breakage - 1.0
-    #         reward += math.exp(-breakage**2) - 2.0
-    #     elif self.simulator.landed:
-    #         target_distance = abs(self.simulator.lander.pos[0]) / (2*self.simulator.lander_width)
-    #         reward += 1.0 * math.exp(-target_distance**2)
-    #     return reward
+    def train (self, num_episodes, num_procs=mp.cpu_count()):
+        lock = mp.Lock()
+        counter = mp.RawValue(ctypes.c_uint, 0)
+        def proc (seed):
+            np.random.seed (seed)
+            while True:
+                with lock:
+                    i = int(counter.value)
+                    counter.value += 1
+                if i < num_episodes:
+                    self.run()
+                    print '%d: Return = %g' % (i, self.Return)
+                else:
+                    break
+        procs = [ mp.Process (target=proc, args=(np.random.randint(sys.maxint),)) for i in xrange(num_procs) ]
+        try:
+            for p in procs: p.start()
+            for p in procs: p.join()
+        finally:
+            for p in procs: p.terminate()
