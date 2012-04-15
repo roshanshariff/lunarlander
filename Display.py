@@ -92,7 +92,7 @@ class LunarLanderWindow (pyglet.window.Window):
     def update (self, _):
 
         dt = self.simulator.dt
-        if not self.framework.run(dt):
+        if not self.framework.run(dt, learn=False):
             print 'Return =', self.framework.Return
             self.start(1.0)
 

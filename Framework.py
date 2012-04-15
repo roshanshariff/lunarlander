@@ -3,10 +3,9 @@ import math
 
 class Framework:
 
-    def __init__ (self, simulator, agent, learn=True):
+    def __init__ (self, simulator, agent):
         self.simulator = simulator
         self.agent = agent
-        self.learn = learn
         self.initialize()
 
     def initialize (self):
@@ -21,13 +20,13 @@ class Framework:
 
         # pos_x = -2*self.simulator.lander_width
         # pos_y = 15.0
-        pos_x = 30*(2*np.random.random()-1)
-        pos_y = 3.0 + 17*np.random.random()
+        pos_x = self.agent.max_state[0]*(2*np.random.random()-1)
+        pos_y = 3.0 + (self.agent.max_state[1]-3.0)*np.random.random()
         rot = math.radians(45)*(2*np.random.random()-1)
 
         self.simulator.initialize (pos_x=pos_x, pos_y=pos_y, rot=rot)
 
-    def run (self, dt=float('inf')):
+    def run (self, dt=float('inf'), learn=True):
 
         if not self.initialized: self.initialize()
 
@@ -49,7 +48,7 @@ class Framework:
 
                 reward = self.reward()
                 self.Return += reward
-                if not self.learn: reward = None
+                if not learn: reward = None
 
                 terminal = self.simulator.crashed or self.simulator.landed
                 self.agent.update (reward, terminal)
