@@ -64,7 +64,7 @@ class Framework:
         if self.simulator.crashed or self.simulator.landed:
             reward -= abs(self.simulator.lander.pos[0]) / self.simulator.lander_width
         if self.simulator.crashed:
-            reward -= 1.0 + math.log (1.0 + math.log(self.simulator.breakage))
+            reward -= 1.0 + math.log10(self.simulator.lander.breakage)
         return reward
 
     # def reward (self): 
