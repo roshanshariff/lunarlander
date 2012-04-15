@@ -74,7 +74,6 @@ class RigidBody:
                 K += np.eye(2)/self.mass
 
                 impulse = np.linalg.solve(K, [-collider_vel[0], -(1+restitution)*collider_vel[1]])
-                print self.mu_s, self.mu_k
 
                 if abs(impulse[0]) > self.mu_s*impulse[1]:
                     friction = self.mu_k
