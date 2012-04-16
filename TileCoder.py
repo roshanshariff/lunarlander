@@ -119,15 +119,22 @@ class TravisTileCoder: # 18
             self.num_features += multi_tiling.total_tiles
             self.active_features += multi_tiling.num_tilings
 
+        # Precompute feature offsets
+        self.ix_offsets = np.empty(self.active_features, dtype=int)
+        offset = 0
+        i = 0
+        for mt in self.multi_tilings:
+            for n in xrange(0,mt.num_tilings):
+                self.ix_offsets[i] = offset
+                offset += mt.tiles_per_tiling
+                i += 1
+
     def indices(self, coord):
-        ixs = np.empty(self.active_features, dtype=int)
-        ix_offset = 0
+        ixs = np.empty(self.active_features, dtype=np.int)
         i = 0
         for multi_tiling in self.multi_tilings:
-            for ix in multi_tiling.indices(coord):
-                ixs[i] = ix_offset + ix
-                ix_offset += multi_tiling.tiles_per_tiling
-                i += 1
+            ixs[i: i + multi_tiling.num_tilings] = multi_tiling.indices(coord) + self.ix_offsets[i: i + multi_tiling.num_tilings]
+            i += multi_tiling.num_tilings
         return ixs
 
 class RoshanTileCoder:
