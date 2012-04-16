@@ -152,12 +152,12 @@ class RoshanTileCoder:
 
         self.ixs_start = np.array(
             list (itertools.chain.from_iterable (
-                    [ itertools.repeat (self.num_tiles.take(subspace).prod(),
-                                        self.num_offsets.take(subspace).prod())
-                      for subspace in subspaces ])),
+                    [ itertools.repeat (self.num_tiles[subspace].prod(),
+                                        self.num_offsets[subspace].prod())
+                      for subspace in self.subspaces ])),
             dtype=np.intp).cumsum()
 
-        self.num_features = ixs_start[-1]
+        self.num_features = self.ixs_start[-1]
         self.active_features = self.ixs_start.size
 
     def indices (self, coord):
@@ -166,25 +166,25 @@ class RoshanTileCoder:
         num_offsets = self.num_offsets
 
         offset_start = coord / self.tile_size
-        tile_coord = np.floor (offset_coord)
+        tile_coord = np.floor (offset_start)
 
         offset_start -= tile_coord
-        offset_start *= offsets
+        offset_start *= num_offsets
         offset_start = offset_start.astype(np.intp)
         offset_start += 1
 
         tile_coord = tile_coord.astype(np.intp)
-        tile_coord %= tiles
+        tile_coord %= num_tiles
 
         tile_coord_offset = tile_coord - 1
-        tile_coord_offset %= tiles
+        tile_coord_offset %= num_tiles
 
         ixs = np.zeros (self.active_features, dtype=np.intp)
         ixs_view = ixs.view()
 
-        for subspace in subspaces:
+        for subspace in self.subspaces:
 
-            subspace_offsets = offsets[subspace]
+            subspace_offsets = num_offsets[subspace]
             num_subspace_offsets = subspace_offsets.prod()
 
             ixs_offsets = ixs_view[:num_subspace_offsets]
@@ -192,15 +192,16 @@ class RoshanTileCoder:
 
             ixs_view = ixs_view[num_subspace_offsets:]
 
-            for i in subspace.nonzero():
+            for i in subspace.nonzero()[0]:
                 
-                ixs_offsets *= tiles[i]
+                ixs_offsets *= num_tiles[i]
                 ixs_offsets[:offset_start[i]] += tile_coord[i]
                 ixs_offsets[offset_start[i]:] += tile_coord_offset[i]
 
                 ixs_offsets = np.rollaxis (ixs_offsets, 0, ixs_offsets.ndim)
 
         ixs[1:] += self.ixs_start[:-1]
+        return ixs
 
 class HashingTileCoder:
 
