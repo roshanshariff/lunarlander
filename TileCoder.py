@@ -133,9 +133,9 @@ class TravisTileCoder: # 18
         ixs = np.empty(self.active_features, dtype=np.int)
         i = 0
         for multi_tiling in self.multi_tilings:
-            ixs[i: i + multi_tiling.num_tilings] = multi_tiling.indices(coord) + self.ix_offsets[i: i + multi_tiling.num_tilings]
+            ixs[i: i + multi_tiling.num_tilings] = multi_tiling.indices(coord)
             i += multi_tiling.num_tilings
-        return ixs
+        return ixs + self.ix_offsets
 
 class RoshanTileCoder:
 
