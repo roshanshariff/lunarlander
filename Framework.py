@@ -74,7 +74,7 @@ class Framework:
         reward -= -0.01 * self.simulator.main_throttle()
         return reward
 
-    def train (self, num_episodes, num_procs=mp.cpu_count()):
+    def train (self, num_episodes, time_limit=600.0, num_procs=mp.cpu_count()):
         lock = mp.Lock()
         counter = mp.RawValue(ctypes.c_uint, 0)
         def proc (seed):
@@ -84,8 +84,11 @@ class Framework:
                     i = int(counter.value)
                     counter.value += 1
                 if i < num_episodes:
-                    self.run()
-                    print '%d: Return = %g' % (i, self.Return)
+                    if self.run(dt=time_limit):
+                        print '%d: Return = %g (time limit exceeded)' % (i, self.Return)
+                        self.initialized = False
+                    else:
+                        print '%d: Return = %g' % (i, self.Return)
                 else:
                     break
         procs = [ mp.Process (target=proc, args=(np.random.randint(sys.maxint),)) for i in xrange(num_procs) ]
