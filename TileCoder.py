@@ -67,12 +67,11 @@ class MultiTiling:
         self.offsets = np.array(offsets, dtype=np.float64)
 
         # Precompute the multiplications required to ravel the index
+        self.strides = np.empty((1,self.num_cells.shape[1]))
         stride = 1
-        strides = []
-        for dim_cells in num_cells:
-            strides.append(stride)
-            stride *= dim_cells
-        self.strides = np.array(strides).reshape((1,-1))
+        for i in reversed(xrange(self.strides.shape[1])):
+            self.strides[0,i] = stride
+            stride *= self.num_cells[0,i]
 
         self.tiles_per_tiling = np.prod(num_cells)
         self.num_tilings = self.offsets.shape[0]
