@@ -221,12 +221,17 @@ class HashingTileCoder:
 
 def test_tile_coder (oldtc, trials):
     newtc1 = RoshanTileCoder (oldtc.cell_size, oldtc.num_cells, oldtc.num_offsets, oldtc.subspace_dims)
+    newtc2 = TravisTileCoder (oldtc.cell_size, oldtc.num_cells, oldtc.num_offsets, oldtc.subspace_dims)
     max_state = oldtc.cell_size * oldtc.num_cells
     for i in xrange(trials):
         state = np.random.random(max_state.shape) * max_state
         old_features = oldtc.indices(state)
         new_features1 = newtc1.indices(state)
+        new_features2 = newtc2.indices(state)
         if not np.all(old_features == new_features1):
-            print 'Mismatch'
+            print 'Mismatch on TC 1'
+            break
+        if not np.all(old_features == new_features2):
+            print 'Mismatch on TC 2'
             break
     print 'Completed'
