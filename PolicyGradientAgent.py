@@ -187,8 +187,10 @@ class EligibilityTrace:
         self.ix = (self.ix + 1) % self.length
 
     def add_to_vector (self, vec, value):
-        for ix in range(self.length):
-            vec[self.features[ix,:]] += self.weights[ix]*value
+        features = self.features
+        weights = self.weights
+        for ix in xrange(self.length):
+            vec[features[ix]] += weights[ix]*value
 
     def clear (self):
         self.weights.fill(0.0)
