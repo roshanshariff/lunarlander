@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as sp
 import random
 
-from TileCoder import TileCoder, HashingTileCoder
+from TileCoder import RoshanTileCoder, HashingTileCoder
 
 class PolicyGradientAgent:
 
@@ -35,7 +35,7 @@ class PolicyGradientAgent:
         self.max_state[4] = float('inf')
         self.min_state[4] = -float('inf')
 
-        return TileCoder (cell_size, (num_cells*(1+state_doubled))+state_bounded, num_samples, [0,1,2,6])
+        return RoshanTileCoder (cell_size, (num_cells*(1+state_doubled))+state_bounded, num_samples, [0,1,2,6])
 
     def features (self):
 
