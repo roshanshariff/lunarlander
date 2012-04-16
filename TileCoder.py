@@ -22,6 +22,8 @@ class TileCoder:
         num_cells = np.array(num_cells, dtype=np.int32)
         num_samples = np.array(num_samples, dtype=np.int32)
 
+        (self.cell_size, self.num_cells, self.num_offsets, self.subspace_dims) = (cell_size, num_cells, num_samples, subspace_dims)
+
         space_dim = len(cell_size)
 
         subspaces = itertools.imap (
@@ -58,6 +60,7 @@ class TileCoder:
         return ixs
     
 class MultiTiling:
+
     def __init__(self, cell_size, num_cells, offsets):
         self.cell_size = np.array(cell_size, dtype=np.float64).reshape((1,-1))
         self.num_cells = np.array(num_cells, dtype=np.int32).reshape((1,-1))
@@ -216,3 +219,15 @@ class HashingTileCoder:
         ixs *= self.hash_const
         ixs %= self.num_features
         return ixs
+
+def test_tile_coder (oldtc, trials):
+    newtc1 = RoshanTileCoder (oldtc.cell_size, oldtc.num_cells, oldtc.num_offsets, oldtc.subspace_dims)
+    max_state = oldtc.cell_size * oldtc.num_cells
+    for i in xrange(trials):
+        state = np.random.random(max_state.shape) * max_state
+        old_features = oldtc.indices(state)
+        new_features1 = newtc1.indices(state)
+        if not np.all(old_features == new_features1):
+            print 'Mismatch'
+            break
+    print 'Completed'
