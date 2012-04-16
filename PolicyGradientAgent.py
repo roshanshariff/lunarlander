@@ -1,6 +1,7 @@
 import math
 import numpy as np
-import scipy.sparse as sp
+from scipy import weave
+from scipy.weave import converters
 import random
 
 from TileCoder import RoshanTileCoder, HashingTileCoder
@@ -187,6 +188,21 @@ class EligibilityTrace:
         self.ix = (self.ix + 1) % self.length
 
     def add_to_vector (self, vec, value):
+        length, num_features = self.features.shape
+        features = self.features
+        weights = self.weights
+        code = \
+        """
+        for (int i = 0; i < length; i++) {
+            double amount =  double(weights(i)) * double(value);
+            for (int j = 0; j < num_features; j++) {
+                vec(features(i,j)) += amount;
+            }
+        }
+        """
+        weave.inline(code, ['length', 'num_features', 'weights', 'features', 'vec', 'value'], type_converters=converters.blitz)
+
+    def add_to_vector_old (self, vec, value):
         features = self.features
         weights = self.weights
         for ix in xrange(self.length):
