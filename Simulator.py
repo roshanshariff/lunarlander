@@ -115,8 +115,8 @@ class RigidBody:
         self.rot += dt * self.rot_vel
 
         # Breakage
-        for (i, c) in enumerate(self.colliders):
-            breakage = np.linalg.norm (np.dot (c['strength'], self.impulses[i]))
+        for i in xrange(self.colliders.size):
+            breakage = np.linalg.norm (np.dot (self.colliders[i]['strength'], self.impulses[i]))
             self.breakage = max (self.breakage, breakage)
 
 class LunarLanderSimulator:
@@ -133,8 +133,8 @@ class LunarLanderSimulator:
         mass = 11036.4 # kg
         mom_inertia = 28258.7 # kg m^2
         restitution = 0.2
-        mu_s = 1.1
-        mu_k = 1.0
+        mu_s = 1.0
+        mu_k = 0.9
 
         rcs_img_pos_y = 0.5508 # Y coordinate of RCS thrusters in image
         rcs_ref_pos_y = 6.4516 # Y coordinate of RCS thrusters in LM coords
@@ -153,7 +153,7 @@ class LunarLanderSimulator:
             return ([x, y] - self.image_center) * self.lander_width
 
         def leg (x, y, strut_dir):
-            strength = 5.0e4
+            strength = 3.0e4
             shear = strength * 4/10
             cos_dir = math.cos(strut_dir)
             sin_dir = math.sin(strut_dir)
@@ -165,10 +165,10 @@ class LunarLanderSimulator:
             return (image_coords(x,y), np.eye(2))
         
         self.lander = RigidBody (mass, mom_inertia, mu_s, mu_k, restitution,
-                                 [ leg  (0.0541, 0.0456, math.pi/3),   # left leg bottom
-                                   leg  (0.9459, 0.0456, math.pi*2/3), # right leg bottom
-                                   leg  (0.0000, 0.0627, math.pi/3),   # left leg outer
-                                   leg  (1.0000, 0.0626, math.pi*2/3), # right leg outer
+                                 [ leg  (0.0541, 0.0456, math.pi/6),   # left leg bottom
+                                   leg  (0.9459, 0.0456, math.pi*5/6), # right leg bottom
+                                   leg  (0.0000, 0.0627, math.pi/6),   # left leg outer
+                                   leg  (1.0000, 0.0626, math.pi*5/6), # right leg outer
                                    body (0.2251, 0.6980),
                                    body (0.4729, 0.8348),
                                    body (0.6211, 0.6809),
