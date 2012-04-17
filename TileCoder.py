@@ -139,22 +139,21 @@ class TravisTileCoder: # 18
 
 class RoshanTileCoder:
 
-    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims, weighted=True):
+    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims, uniform_weights=False):
 
         self.tile_size = np.array (tile_size, dtype=np.float64)
         self.num_tiles = np.array (num_tiles, dtype=np.intp)
         self.num_offsets = np.array (num_offsets, dtype=np.intp)
 
-        space_dim = len(tile_size)
+        def subspace_generator ():
+            space_dim = len(tile_size)
+            for ixs in itertools.chain (*[ itertools.combinations (xrange(0, space_dim), dim)
+                                           for dim in subspace_dims ]):
+                subspace = np.zeros (space_dim, dtype=np.bool)
+                subspace.put (ixs, True)
+                yield subspace
 
-        def select_subspace (ixs):
-            subspace = np.zeros (space_dim, dtype=np.bool)
-            subspace.put (ixs, True)
-            return subspace
-
-        subspaces = itertools.chain (*[ itertools.combinations (range(0, space_dim), dim)
-                                        for dim in subspace_dims ])
-        self.subspaces = np.array(map (select_subspace, subspaces), dtype=np.bool)
+        self.subspaces = np.array (list (subspace_generator()), dtype=np.bool)
 
         subspace_tiles = [ self.num_tiles[subspace].prod() for subspace in self.subspaces ]
         subspace_tilings = [ self.num_offsets[subspace].prod() for subspace in self.subspaces ]
@@ -168,7 +167,7 @@ class RoshanTileCoder:
         self.num_features = sum (tiles_in_tiling)
         self.ixs_start = np.cumsum ([0]+tiles_in_tiling[:-1], dtype=np.intp)
 
-        if weighted:
+        if not uniform_weights:
             feature_weights = 1.0 / (len (subspace_tilings) * np.array (subspace_tilings))
             self.feature_weights = np.array (repeat_for_tilings (feature_weights), dtype=np.float64)
         else:
@@ -202,9 +201,9 @@ class RoshanTileCoder:
             num_subspace_offsets = subspace_offsets.prod()
 
             ixs_offsets = ixs_view[:num_subspace_offsets]
-            ixs_offsets.shape = subspace_offsets
-
             ixs_view = ixs_view[num_subspace_offsets:]
+
+            ixs_offsets.shape = subspace_offsets
 
             for i in subspace.nonzero()[0]:
                 

@@ -23,19 +23,22 @@ class PolicyGradientAgent:
 
     def make_tile_coder (self):
 
-        state_doubled = np.array([0, 0, 1, 1, 0, 1])
-        state_bounded = np.array([1, 1, 1, 1, 0, 1])
+        state_signed  = np.array ([ False, False, True, True,      True,      True ])
+        state_bounded = np.array ([  True,  True, True, True,     False,      True ])
+        tile_size     = np.array ([    5.,    5.,   2.,   2., math.pi/2, math.pi/4 ])
+        num_tiles     = np.array ([     6,     4,    4,    4,         2,         4 ])
+        num_offsets   = np.array ([     2,     2,    4,    4,         8,         4 ])
 
-        cell_size = np.array   ([5., 5., 2., 2., math.pi/2, math.pi/4])
-        num_cells = np.array   ([6,  4,  4,  4,          4,         4])
-        num_samples = np.array ([2,  2,  4,  4,          8,         4])
+        self.max_state = (tile_size * num_tiles) - 1e-10
+        self.max_state[np.logical_not(state_bounded)] = float('inf')
 
-        self.max_state = (cell_size * num_cells) - 1e-10
-        self.min_state = -self.max_state*state_doubled
-        self.max_state[4] = float('inf')
-        self.min_state[4] = -float('inf')
+        self.min_state = -self.max_state
+        self.min_state[np.logical_not(state_signed)] = 0.0
 
-        return RoshanTileCoder (cell_size, (num_cells*(1+state_doubled))+state_bounded, num_samples, [0,1,2,6])
+        num_tiles[state_signed] *= 2
+        num_tiles[state_bounded] += 1
+
+        return RoshanTileCoder (tile_size, num_tiles, num_offsets, [0,1,2,6])
 
     def features (self):
 
