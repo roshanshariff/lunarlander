@@ -224,16 +224,17 @@ class DequeEligibilityTrace:
 
     def add_to_vector (self, vec, value):
         feature_weights = self.feature_weights
+        falloff = self.falloff
         code = """
             double amount = double(weight) * double(value);
             for (int i = 0; i < feature_weights.size(); ++i) {
                 vec(features(i)) += amount * feature_weights(i);
             }
         """
-        names = [ 'feature_weights', 'vec', 'value', 'features', 'weight' ]
+        names = [ 'vec', 'value', 'feature_weights', 'features', 'weight' ]
         for (features, weight) in self.trace:
             weave.inline (code, names, type_converters=weave.converters.blitz)
-            value *= self.falloff
- 
+            value *= falloff
+
     def clear (self):
         self.trace.clear()
