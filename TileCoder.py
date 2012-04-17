@@ -139,7 +139,7 @@ class TravisTileCoder: # 18
 
 class RoshanTileCoder:
 
-    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims):
+    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims, weighted=True):
 
         self.tile_size = np.array (tile_size, dtype=np.float64)
         self.num_tiles = np.array (num_tiles, dtype=np.intp)
@@ -152,22 +152,27 @@ class RoshanTileCoder:
             subspace.put (ixs, True)
             return subspace
 
-        self.subspaces = np.array(
-            map (select_subspace,
-                 itertools.chain.from_iterable (
-                    [ itertools.combinations (range(0, space_dim), dim)
-                      for dim in subspace_dims ])),
-            dtype=np.bool)
+        subspaces = itertools.chain (*[ itertools.combinations (range(0, space_dim), dim)
+                                        for dim in subspace_dims ])
+        self.subspaces = np.array(map (select_subspace, subspaces), dtype=np.bool)
 
-        self.ixs_start = np.array(
-            list (itertools.chain.from_iterable (
-                    [ itertools.repeat (self.num_tiles[subspace].prod(),
-                                        self.num_offsets[subspace].prod())
-                      for subspace in self.subspaces ])),
-            dtype=np.intp).cumsum()
+        subspace_tiles = [ self.num_tiles[subspace].prod() for subspace in self.subspaces ]
+        subspace_tilings = [ self.num_offsets[subspace].prod() for subspace in self.subspaces ]
 
-        self.num_features = self.ixs_start[-1]
-        self.active_features = self.ixs_start.size
+        def repeat_for_tilings (values):
+            return list (itertools.chain (*map (itertools.repeat, values, subspace_tilings)))
+
+        tiles_in_tiling = repeat_for_tilings (subspace_tiles)
+
+        self.active_features = sum (subspace_tilings)
+        self.num_features = sum (tiles_in_tiling)
+        self.ixs_start = np.cumsum ([0]+tiles_in_tiling[:-1], dtype=np.intp)
+
+        if weighted:
+            feature_weights = 1.0 / (len (subspace_tilings) * np.array (subspace_tilings))
+            self.feature_weights = np.array (repeat_for_tilings (feature_weights), dtype=np.float64)
+        else:
+            self.feature_weights = np.ones (self.active_features, dtype=np.float64) / self.active_features
 
     def indices (self, coord):
 
@@ -209,7 +214,7 @@ class RoshanTileCoder:
 
                 ixs_offsets = np.rollaxis (ixs_offsets, 0, ixs_offsets.ndim)
 
-        ixs[1:] += self.ixs_start[:-1]
+        ixs += self.ixs_start
         return ixs
 
 class HashingTileCoder:
@@ -217,6 +222,7 @@ class HashingTileCoder:
     def __init__ (self, tile_coder, num_features):
         self.tile_coder = tile_coder
         self.active_features = tile_coder.active_features
+        self.feature_weights = tile_coder.feature_weights
         self.num_features = min(num_features, tile_coder.num_features)
         self.hash_const = 2654435761 if num_features < tile_coder.num_features else 1
 

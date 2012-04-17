@@ -2,7 +2,6 @@ import math
 import numpy as np
 from scipy import weave
 from scipy.weave import converters
-import random
 
 from TileCoder import RoshanTileCoder, HashingTileCoder
 
@@ -102,13 +101,14 @@ class Critic:
 
     def __init__ (self, tile_coder, Lambda, alpha, value=0.0, gamma=1.0):
 
-        self.alpha = alpha/tile_coder.active_features
+        self.alpha = alpha
         self.gamma = gamma
+        self.feature_weights = tile_coder.feature_weights
 
-        self.eligibility = EligibilityTrace (tile_coder.active_features, gamma*Lambda)
+        self.eligibility = EligibilityTrace (self.feature_weights, gamma*Lambda)
 
         self.value = np.empty(tile_coder.num_features)
-        self.value.fill (value / tile_coder.active_features)
+        self.value.fill (value)
 
     def initialize (self, features):
         self.features = features
@@ -116,8 +116,9 @@ class Critic:
 
     def evaluate (self, new_features, reward, terminal=False):
 
-        value = np.sum(self.value[new_features]) if not terminal else 0.0
-        td_error = reward + self.gamma*value - np.sum(self.value[self.features])
+        old_value = np.dot(self.value[self.features], self.feature_weights)
+        new_value = np.dot(self.value[new_features], self.feature_weights) if not terminal else 0.0
+        td_error = reward + self.gamma*new_value - old_value
 
         self.eligibility.add_features(self.features)
         self.eligibility.add_to_vector(self.value, self.alpha*td_error)
@@ -129,37 +130,37 @@ class PolicyGradientActor:
 
     def __init__ (self, tile_coder, Lambda, alpha, max_stdev, mean, stdev, gamma=1.0):
 
-        self.alpha = alpha/tile_coder.active_features
+        self.alpha = alpha
         self.gamma = gamma
         self.max_stdev = max_stdev
+        self.feature_weights = tile_coder.feature_weights
 
-        self.eligibility_mean = EligibilityTrace (tile_coder.active_features, gamma*Lambda)
-        self.eligibility_stdev = EligibilityTrace (tile_coder.active_features, gamma*Lambda)
+        self.eligibility_mean = EligibilityTrace (self.feature_weights, gamma*Lambda)
+        self.eligibility_stdev = EligibilityTrace (self.feature_weights, gamma*Lambda)
 
         self.action_mean = np.empty (tile_coder.num_features)
-        self.action_mean.fill (mean / tile_coder.active_features)
+        self.action_mean.fill (mean)
 
         self.action_stdev = np.empty (tile_coder.num_features)
-        self.action_stdev.fill (-math.log((max_stdev-stdev)/stdev) / tile_coder.active_features)
+        self.action_stdev.fill (-math.log((max_stdev-stdev)/stdev))
 
     def initialize (self):
         self.eligibility_mean.clear()
         self.eligibility_stdev.clear()
 
+    def action_dist (self):
+        action_mean = np.dot(self.action_mean[self.features], self.feature_weights)
+        action_stdev = self.max_stdev / (1.0 + math.exp(-np.dot(self.action_stdev[self.features], self.feature_weights)))
+        return (action_mean, action_stdev)
+
     def act (self, features):
-
-        action_mean = np.sum(self.action_mean[features])
-        action_stdev = self.max_stdev / (1.0 + math.exp(-np.sum(self.action_stdev[features])))
-
-        self.action = random.gauss(action_mean, action_stdev)
         self.features = features
-
+        self.action = np.random.normal(*self.action_dist())
         return self.action
         
     def learn (self, td_error):
 
-        action_mean = np.sum(self.action_mean[self.features])
-        action_stdev = self.max_stdev / (1.0 + math.exp(-np.sum(self.action_stdev[self.features])))
+        (action_mean, action_stdev) = self.action_dist()
         std_action = (self.action - action_mean) / action_stdev
 
         alpha = self.alpha * action_stdev**2
@@ -174,42 +175,35 @@ class PolicyGradientActor:
 
 class EligibilityTrace:
 
-    def __init__ (self, active_features, falloff, threshold=0.01):
+    def __init__ (self, feature_weights, falloff, threshold=0.05):
         self.falloff = falloff
         self.length = int(math.ceil(math.log(threshold, falloff)))
-        self.weights = np.empty(self.length)
-        self.features = np.empty((self.length, active_features), dtype=np.int)
+        self.weights = np.empty(self.length, dtype=np.float64)
+        self.features = np.empty((self.length, feature_weights.size), dtype=np.intp)
+        self.feature_weights = feature_weights
         self.clear()
 
     def add_features (self, features, weight=1.0):
         self.weights *= self.falloff
         self.weights[self.ix] = weight
-        self.features[self.ix,:] = features
+        self.features[self.ix] = features
         self.ix = (self.ix + 1) % self.length
 
     def add_to_vector (self, vec, value):
-        length, num_features = self.features.shape
-        features = self.features
         weights = self.weights
-        code = \
-        """
-        for (int i = 0; i < length; i++) {
-            double amount =  double(weights(i)) * double(value);
-            for (int j = 0; j < num_features; j++) {
-                vec(features(i,j)) += amount;
+        features = self.features
+        feature_weights = self.feature_weights
+        length, num_features = features.shape
+        weave.inline ("""
+            for (int i = 0; i < length; i++) {
+                double amount = double(weights(i)) * double(value);
+                for (int j = 0; j < num_features; j++) {
+                    vec(features(i,j)) += amount * double(feature_weights(j));
+                }
             }
-        }
-        """
-        weave.inline(code, ['length', 'num_features', 'weights', 'features', 'vec', 'value'], type_converters=converters.blitz)
-
-    def add_to_vector_old (self, vec, value):
-        features = self.features
-        weights = self.weights
-        for ix in xrange(self.length):
-            vec[features[ix]] += weights[ix]*value
+        """, locals().keys(), type_converters=converters.blitz)
 
     def clear (self):
         self.weights.fill(0.0)
         self.features.fill(0)
         self.ix = 0
-
