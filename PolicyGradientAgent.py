@@ -1,7 +1,7 @@
 import math
 import numpy as np
-from scipy import weave
-from scipy.weave import converters
+import collections
+import scipy.weave as weave
 
 from TileCoder import RoshanTileCoder, HashingTileCoder
 
@@ -108,7 +108,7 @@ class Critic:
         self.gamma = gamma
         self.feature_weights = tile_coder.feature_weights
 
-        self.eligibility = EligibilityTrace (self.feature_weights, gamma*Lambda)
+        self.eligibility = DequeEligibilityTrace (self.feature_weights, gamma*Lambda)
 
         self.value = np.empty(tile_coder.num_features)
         self.value.fill (value)
@@ -138,8 +138,8 @@ class PolicyGradientActor:
         self.max_stdev = max_stdev
         self.feature_weights = tile_coder.feature_weights
 
-        self.eligibility_mean = EligibilityTrace (self.feature_weights, gamma*Lambda)
-        self.eligibility_stdev = EligibilityTrace (self.feature_weights, gamma*Lambda)
+        self.eligibility_mean = DequeEligibilityTrace (self.feature_weights, gamma*Lambda)
+        self.eligibility_stdev = DequeEligibilityTrace (self.feature_weights, gamma*Lambda)
 
         self.action_mean = np.empty (tile_coder.num_features)
         self.action_mean.fill (mean)
@@ -204,9 +204,36 @@ class EligibilityTrace:
                     vec(features(i,j)) += amount * double(feature_weights(j));
                 }
             }
-        """, locals().keys(), type_converters=converters.blitz)
+        """, locals().keys(), type_converters=weave.converters.blitz)
 
     def clear (self):
         self.weights.fill(0.0)
         self.features.fill(0)
         self.ix = 0
+
+class DequeEligibilityTrace:
+
+    def __init__ (self, feature_weights, falloff, threshold=0.05):
+        self.feature_weights = feature_weights
+        self.falloff = falloff
+        self.trace = collections.deque (maxlen=int(math.ceil(math.log(threshold, falloff))))
+        self.clear()
+
+    def add_features (self, features, weight=1.0):
+        self.trace.appendleft ((features, weight))
+
+    def add_to_vector (self, vec, value):
+        feature_weights = self.feature_weights
+        code = """
+            double amount = double(weight) * double(value);
+            for (int i = 0; i < feature_weights.size(); ++i) {
+                vec(features(i)) += amount * feature_weights(i);
+            }
+        """
+        names = [ 'feature_weights', 'vec', 'value', 'features', 'weight' ]
+        for (features, weight) in self.trace:
+            weave.inline (code, names, type_converters=weave.converters.blitz)
+            value *= self.falloff
+ 
+    def clear (self):
+        self.trace.clear()
