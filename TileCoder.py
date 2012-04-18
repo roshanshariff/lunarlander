@@ -147,19 +147,20 @@ class RoshanTileCoder:
 
         def subspace_generator ():
             space_dim = len(tile_size)
-            for ixs in itertools.chain (*[ itertools.combinations (xrange(0, space_dim), dim)
-                                           for dim in subspace_dims ]):
-                subspace = np.zeros (space_dim, dtype=np.bool)
-                subspace.put (ixs, True)
-                yield subspace
+            for subspace_dim in subspace_dims:
+                for ixs in itertools.combinations (xrange(0,space_dim), subspace_dim):
+                    subspace = np.zeros (space_dim, dtype=np.bool)
+                    subspace.put (ixs, True)
+                    yield subspace
 
-        self.subspaces = np.array (list (subspace_generator()), dtype=np.bool)
+        self.subspaces = np.array (list(subspace_generator()), dtype=np.bool)
 
         subspace_tiles = [ self.num_tiles[subspace].prod() for subspace in self.subspaces ]
         subspace_tilings = [ self.num_offsets[subspace].prod() for subspace in self.subspaces ]
 
         def repeat_for_tilings (values):
-            return list (itertools.chain (*map (itertools.repeat, values, subspace_tilings)))
+            return list (itertools.chain.from_iterable (
+                    itertools.imap (itertools.repeat, values, subspace_tilings)))
 
         tiles_in_tiling = repeat_for_tilings (subspace_tiles)
 
