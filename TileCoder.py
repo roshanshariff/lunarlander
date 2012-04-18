@@ -139,7 +139,7 @@ class TravisTileCoder: # 18
 
 class RoshanTileCoder:
 
-    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims, uniform_weights=False):
+    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims, uniform_weights=True):
 
         self.tile_size = np.array (tile_size, dtype=np.float64)
         self.num_tiles = np.array (num_tiles, dtype=np.intp)
