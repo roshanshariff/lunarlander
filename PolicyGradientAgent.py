@@ -30,10 +30,15 @@ class PolicyGradientAgent:
         num_offsets   = np.array ([     2,     2,    4,    4,         8,         4 ])
 
         self.max_state = (tile_size * num_tiles) - 1e-10
-        self.max_state[np.logical_not(state_bounded)] = float('inf')
 
         self.min_state = -self.max_state
         self.min_state[np.logical_not(state_signed)] = 0.0
+
+        self.max_clip_state = self.max_state.copy()
+        self.max_clip_state[np.logical_not(state_bounded)] = float('inf')
+
+        self.min_clip_state = -self.max_clip_state
+        self.min_clip_state[np.logical_not(state_signed)] = 0.0
 
         num_tiles[state_signed] *= 2
         num_tiles[state_bounded] += 1
@@ -50,7 +55,7 @@ class PolicyGradientAgent:
         if pos_x < 0: (xsign, pos_x, vel_x, rot, rot_vel) = (-1.0, -pos_x, -vel_x, -rot, -rot_vel)
         else: xsign = 1.0
 
-        state = np.array([pos_x, pos_y, vel_x, vel_y, rot, rot_vel]).clip(self.min_state, self.max_state)
+        state = np.array([pos_x, pos_y, vel_x, vel_y, rot, rot_vel]).clip(self.min_clip_state, self.max_clip_state)
         return (self.tile_coder.indices(state), xsign)
 
     def take_action (self, features, xsign):

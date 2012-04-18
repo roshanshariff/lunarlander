@@ -185,7 +185,7 @@ class LunarLanderSimulator:
         self.rcs_radius = 0.25
         self.rcs_spread = 0.1
 
-    def initialize (self, pos_x=0.0, pos_y=0.0, rot=0.0, vel_x=0.0, vel_y=0.0, rot_vel=0.0):
+    def initialize (self, pos_x=0.0, pos_y=0.0, vel_x=0.0, vel_y=0.0, rot=0.0, rot_vel=0.0):
 
         min_pos_y = -np.min(np.dot([math.sin(rot), math.cos(rot)], self.lander.colliders['pos'].T))
 
