@@ -3,7 +3,7 @@ import numpy as np
 import collections
 import scipy.weave as weave
 
-from TileCoder import RoshanTileCoder, HashingTileCoder
+from TileCoder import TileCoder, HashingTileCoder
 
 class PolicyGradientAgent:
 
@@ -15,9 +15,14 @@ class PolicyGradientAgent:
         self.tile_coder = HashingTileCoder (self.make_tile_coder(), num_features)
 
         # TODO Set max_stdev in a more principled way
-        self.value_critic = Critic (self.tile_coder, Lambda, alpha_v, value=0.0)
-        self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=simulator.max_thrust/4, mean=1.0, stdev=simulator.max_thrust/8)
-        self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_v, max_stdev=simulator.max_rcs/2, mean=0.0, stdev=simulator.max_rcs/4)
+
+        self.critic = Critic (self.tile_coder, Lambda, alpha_v, initial_value=0.0)
+
+        self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=simulator.max_thrust/4,
+                                                 initial_mean=1.0, initial_stdev=simulator.max_thrust/8)
+
+        self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=simulator.max_rcs/2,
+                                              initial_mean=0.0, initial_stdev=simulator.max_rcs/4)
 
         self.initialize()
 
@@ -26,8 +31,8 @@ class PolicyGradientAgent:
         state_signed  = np.array ([ False, False, True, True,      True,      True ])
         state_bounded = np.array ([  True,  True, True, True,     False,      True ])
         tile_size     = np.array ([    5.,    5.,   2.,   2., math.pi/2, math.pi/4 ])
-        num_tiles     = np.array ([     6,     4,    4,    4,         2,         2 ])
-        num_offsets   = np.array ([     2,     2,    4,    4,         8,         8 ])
+        num_tiles     = np.array ([     6,     4,    4,    4,         2,         4 ])
+        num_offsets   = np.array ([     2,     2,    4,    4,         8,         4 ])
 
         self.max_state = (tile_size * num_tiles) - 1e-10
 
@@ -43,7 +48,7 @@ class PolicyGradientAgent:
         num_tiles[state_signed] *= 2
         num_tiles[state_bounded] += 1
 
-        return RoshanTileCoder (tile_size, num_tiles, num_offsets, [0,1,2,6])
+        return TileCoder (tile_size, num_tiles, num_offsets, [0,1,2,6])
 
     def features (self):
 
@@ -73,7 +78,7 @@ class PolicyGradientAgent:
 
         (features, xsign) = self.features()
 
-        self.value_critic.initialize(features)
+        self.critic.initialize(features)
         self.thrust_actor.initialize()
         self.rcs_actor.initialize()
 
@@ -84,7 +89,7 @@ class PolicyGradientAgent:
         (features, xsign) = self.features()
 
         if reward != None:
-            td_error = self.value_critic.evaluate (features, reward, terminal)
+            td_error = self.critic.evaluate (features, reward, terminal)
             self.thrust_actor.learn (td_error)
             self.rcs_actor.learn (td_error)
 
@@ -92,73 +97,63 @@ class PolicyGradientAgent:
             self.take_action (features, xsign)
 
     def save_state (self, savefile='data/saved_state.npy'):
-        np.save (savefile, np.vstack ((self.value_critic.value,
-                                       self.thrust_actor.action_mean,
-                                       self.thrust_actor.action_stdev,
-                                       self.rcs_actor.action_mean,
-                                       self.rcs_actor.action_stdev)))
+        np.save (savefile, np.vstack ((self.critic.value.weights,
+                                       self.thrust_actor.action_mean.weights,
+                                       self.thrust_actor.action_stdev.weights,
+                                       self.rcs_actor.action_mean.weights,
+                                       self.rcs_actor.action_stdev.weights)))
 
     def load_state (self, savefile='data/saved_state.npy', mmap_mode=None):
-        (self.value_critic.value,
-         self.thrust_actor.action_mean,
-         self.thrust_actor.action_stdev,
-         self.rcs_actor.action_mean,
-         self.rcs_actor.action_stdev) = np.load (savefile, mmap_mode)
+        (self.critic.value.weights,
+         self.thrust_actor.action_mean.weights,
+         self.thrust_actor.action_stdev.weights,
+         self.rcs_actor.action_mean.weights,
+         self.rcs_actor.action_stdev.weights) = np.load (savefile, mmap_mode)
 
 class Critic:
 
-    def __init__ (self, tile_coder, Lambda, alpha, value=0.0, gamma=1.0):
+    def __init__ (self, tile_coder, Lambda, alpha, initial_value=0.0, gamma=1.0):
 
-        self.alpha = alpha
+        self.alpha = alpha / tile_coder.active_features
         self.gamma = gamma
-        self.feature_weights = tile_coder.feature_weights
 
-        self.eligibility = DequeEligibilityTrace (self.feature_weights, gamma*Lambda)
-
-        self.value = np.empty(tile_coder.num_features)
-        self.value.fill (value)
+        self.value = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_value)
 
     def initialize (self, features):
         self.features = features
-        self.eligibility.clear()
+        self.value.initialize()
 
     def evaluate (self, new_features, reward, terminal=False):
 
-        old_value = np.dot(self.value[self.features], self.feature_weights)
-        new_value = np.dot(self.value[new_features], self.feature_weights) if not terminal else 0.0
+        old_value = self.value.value (self.features)
+        new_value = self.value.value (new_features) if not terminal else 0.0
         td_error = reward + self.gamma*new_value - old_value
 
-        self.eligibility.add_features(self.features)
-        self.eligibility.add_to_vector(self.value, self.alpha*td_error)
+        self.value.add_features (self.features)
+        self.value.update (self.alpha*td_error)
 
         self.features = new_features
         return td_error
 
 class PolicyGradientActor:
 
-    def __init__ (self, tile_coder, Lambda, alpha, max_stdev, mean, stdev, gamma=1.0):
+    def __init__ (self, tile_coder, Lambda, alpha, max_stdev, initial_mean, initial_stdev, gamma=1.0):
 
-        self.alpha = alpha
-        self.gamma = gamma
+        self.alpha = alpha / tile_coder.active_features
         self.max_stdev = max_stdev
-        self.feature_weights = tile_coder.feature_weights
 
-        self.eligibility_mean = DequeEligibilityTrace (self.feature_weights, gamma*Lambda)
-        self.eligibility_stdev = DequeEligibilityTrace (self.feature_weights, gamma*Lambda)
+        initial_stdev_value = -math.log((max_stdev-initial_stdev)/initial_stdev)
 
-        self.action_mean = np.empty (tile_coder.num_features)
-        self.action_mean.fill (mean)
-
-        self.action_stdev = np.empty (tile_coder.num_features)
-        self.action_stdev.fill (-math.log((max_stdev-stdev)/stdev))
+        self.action_mean = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_mean)
+        self.action_stdev = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_stdev_value)
 
     def initialize (self):
-        self.eligibility_mean.clear()
-        self.eligibility_stdev.clear()
+        self.action_mean.initialize()
+        self.action_stdev.initialize()
 
     def action_dist (self):
-        action_mean = np.dot(self.action_mean[self.features], self.feature_weights)
-        action_stdev = self.max_stdev / (1.0 + math.exp(-np.dot(self.action_stdev[self.features], self.feature_weights)))
+        action_mean = self.action_mean.value (self.features)
+        action_stdev = self.max_stdev / (1.0 + math.exp(-self.action_stdev.value(self.features)))
         return (action_mean, action_stdev)
 
     def act (self, features):
@@ -171,15 +166,52 @@ class PolicyGradientActor:
         (action_mean, action_stdev) = self.action_dist()
         std_action = (self.action - action_mean) / action_stdev
 
-        alpha = self.alpha * action_stdev**2
-
         action_mean_gradient = std_action / action_stdev
-        self.eligibility_mean.add_features (self.features, action_mean_gradient)
-        self.eligibility_mean.add_to_vector (self.action_mean, alpha*td_error)
+        self.action_mean.add_features (self.features, action_mean_gradient)
 
         action_stdev_gradient = self.max_stdev*(std_action**2 - 1)*(1-action_stdev)
-        self.eligibility_stdev.add_features (self.features, action_stdev_gradient)
-        self.eligibility_stdev.add_to_vector (self.action_stdev, alpha*td_error)
+        self.action_stdev.add_features (self.features, action_stdev_gradient)
+
+        scaled_alpha = self.alpha * action_stdev**2
+        self.action_mean.update (scaled_alpha*td_error)
+        self.action_stdev.update (scaled_alpha*td_error)
+
+class LinearFunctionApprox:
+
+    def __init__ (self, tile_coder, falloff, initial_value=0.0, threshold=0.05):
+        self.feature_weights = tile_coder.feature_weights
+        self.weights = np.empty (tile_coder.num_features)
+        self.weights.fill (initial_value/tile_coder.active_features)
+        self.falloff = falloff
+        self.trace = collections.deque (maxlen=int(math.ceil(math.log(threshold, falloff))))
+
+    def initialize (self):
+        self.trace.clear()
+
+    def value (self, features):
+        return np.sum (self.weights.take(features))
+
+    def add_features (self, features, scaling=1.0):
+        self.trace.appendleft ((features, scaling))
+
+    def update (self, step_size):
+        feature_weights = self.feature_weights
+        weights = self.weights
+        code = """
+            double amount = double(step_size) * double(scaling);
+            for (int i = 0; i < features.size(); ++i) {
+                int index = int(features(i));
+                weights(index) += amount * feature_weights(i);
+            }
+        """
+        names = [ 'step_size', 'feature_weights', 'weights', 'features', 'scaling' ]
+        falloff = self.falloff
+        for (features, scaling) in self.trace:
+            print weights.
+            #weave.inline (code, names, type_converters=weave.converters.blitz)
+            weights[features] += step_size * scaling
+            step_size *= falloff
+
 
 class EligibilityTrace:
 
@@ -216,30 +248,3 @@ class EligibilityTrace:
         self.features.fill(0)
         self.ix = 0
 
-class DequeEligibilityTrace:
-
-    def __init__ (self, feature_weights, falloff, threshold=0.05):
-        self.feature_weights = feature_weights
-        self.falloff = falloff
-        self.trace = collections.deque (maxlen=int(math.ceil(math.log(threshold, falloff))))
-        self.clear()
-
-    def add_features (self, features, weight=1.0):
-        self.trace.appendleft ((features, weight))
-
-    def add_to_vector (self, vec, value):
-        feature_weights = self.feature_weights
-        falloff = self.falloff
-        code = """
-            double amount = double(weight) * double(value);
-            for (int i = 0; i < feature_weights.size(); ++i) {
-                vec(features(i)) += amount * feature_weights(i);
-            }
-        """
-        names = [ 'vec', 'value', 'feature_weights', 'features', 'weight' ]
-        for (features, weight) in self.trace:
-            weave.inline (code, names, type_converters=weave.converters.blitz)
-            value *= falloff
-
-    def clear (self):
-        self.trace.clear()
