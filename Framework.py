@@ -21,18 +21,20 @@ class Framework:
 
     def initialize_simulator (self):
 
-        # pos_x = -2*self.simulator.lander_width
-        # pos_y = 15.0
-  
-        # pos_x = self.agent.max_state[0]*(2*np.random.random()-1)
-        # pos_y = 3.0 + (self.agent.max_state[1]-3.0)*np.random.random()
-        # rot = math.radians(45)*(2*np.random.random()-1)
+        pos_x = -2*self.simulator.lander_width
+        pos_y = 15.0
+        rot = math.radians(45)*(2*np.random.random()-1)
 
-        state = np.random.random (self.agent.max_state.size)
-        state *= self.agent.max_state - self.agent.min_state
-        state += self.agent.min_state
+        # state = np.random.random (self.agent.max_state.size)
+        # state *= self.agent.max_state - self.agent.min_state
+        # state += self.agent.min_state
+        # state[2:6] = 0.0
 
-        self.simulator.initialize (*state)
+        # if np.random.randint(0,2): state[0] = -state[0]
+        # state[4] = np.random.normal (0.0, math.pi/8)
+        # state[5] = np.random.normal (0.0, math.pi/16)
+
+        self.simulator.initialize (pos_x=pos_x, pos_y=pos_y, rot=rot)
 
     def run (self, dt=float('inf'), learn=True):
 
