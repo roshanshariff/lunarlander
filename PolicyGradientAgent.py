@@ -104,11 +104,12 @@ class PolicyGradientAgent:
                                        self.rcs_actor.action_stdev.weights)))
 
     def load_state (self, savefile='data/saved_state.npy', mmap_mode=None):
+        state = np.array (np.load (savefile, mmap_mode), copy=False)
         (self.critic.value.weights,
          self.thrust_actor.action_mean.weights,
          self.thrust_actor.action_stdev.weights,
          self.rcs_actor.action_mean.weights,
-         self.rcs_actor.action_stdev.weights) = np.load (savefile, mmap_mode)
+         self.rcs_actor.action_stdev.weights) = state
 
 class Critic:
 
@@ -200,16 +201,14 @@ class LinearFunctionApprox:
         code = """
             double amount = double(step_size) * double(scaling);
             for (int i = 0; i < features.size(); ++i) {
-                int index = int(features(i));
-                weights(index) += amount * feature_weights(i);
+                weights(features(i)) += amount;// * feature_weights(i);
             }
         """
         names = [ 'step_size', 'feature_weights', 'weights', 'features', 'scaling' ]
         falloff = self.falloff
         for (features, scaling) in self.trace:
-            print weights.
-            #weave.inline (code, names, type_converters=weave.converters.blitz)
-            weights[features] += step_size * scaling
+            weave.inline (code, names, type_converters=weave.converters.blitz)
+            #weights[features] += step_size * scaling
             step_size *= falloff
 
 
