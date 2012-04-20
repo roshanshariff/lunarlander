@@ -6,10 +6,14 @@ import sys
 
 class Framework:
 
-    def __init__ (self, simulator, agent):
+    def __init__ (self, simulator, agent, num_episodes=5000):
         self.simulator = simulator
         self.agent = agent
         self.initialize()
+
+        self.lock = mp.Lock()
+        self.counter = mp.RawValue(ctypes.c_uint, 0)
+        self.returns = mp.RawArray(ctypes.c_double, num_episodes)
 
     def initialize (self):
         self.initialize_simulator()
@@ -81,23 +85,20 @@ class Framework:
         reward -= 0.01 * self.simulator.main_throttle()
         return reward
 
-    def train (self, num_episodes, time_limit=600.0, num_procs=mp.cpu_count()):
-        lock = mp.Lock()
-        counter = mp.RawValue(ctypes.c_uint, 0)
+    def train (self, time_limit=600.0, num_procs=mp.cpu_count()):
         def proc (seed):
             np.random.seed (seed)
             while True:
-                with lock:
-                    i = int(counter.value)
-                    counter.value += 1
-                if i < num_episodes:
-                    if self.run(dt=time_limit):
-                        print '%d: Return = %g (time limit exceeded)' % (i, self.Return)
-                        self.initialized = False
+                time_exceeded = self.run(dt=time_limit)
+                with self.lock:
+                    i = int(self.counter.value)
+                    if i < len(self.returns):
+                        self.returns[i] = self.Return
                     else:
-                        print '%d: Return = %g' % (i, self.Return)
-                else:
-                    break
+                        break
+                    self.counter.value += 1
+                print i, 'Return =', self.returns[i], '(time limit exceeded)' if time_exceeded else ''
+
         procs = [ mp.Process (target=proc, args=(np.random.randint(sys.maxint),)) for i in xrange(num_procs) ]
         try:
             for p in procs: p.start()
