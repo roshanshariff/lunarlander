@@ -115,7 +115,7 @@ class Critic:
 
     def __init__ (self, tile_coder, Lambda, alpha, initial_value=0.0, gamma=1.0):
 
-        self.alpha = alpha / tile_coder.active_features
+        self.alpha = alpha
         self.gamma = gamma
 
         self.value = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_value)
@@ -140,7 +140,7 @@ class PolicyGradientActor:
 
     def __init__ (self, tile_coder, Lambda, alpha, max_stdev, initial_mean, initial_stdev, gamma=1.0):
 
-        self.alpha = alpha / tile_coder.active_features
+        self.alpha = alpha
         self.max_stdev = max_stdev
 
         initial_stdev_value = -math.log((max_stdev-initial_stdev)/initial_stdev)
@@ -182,7 +182,7 @@ class LinearFunctionApprox:
     def __init__ (self, tile_coder, falloff, initial_value=0.0, threshold=0.05):
         self.feature_weights = tile_coder.feature_weights
         self.weights = np.empty (tile_coder.num_features)
-        self.weights.fill (initial_value/tile_coder.active_features)
+        self.weights.fill (initial_value/self.feature_weights.sum())
         self.falloff = falloff
         self.trace = collections.deque (maxlen=int(math.ceil(math.log(threshold, falloff))))
 
@@ -190,7 +190,7 @@ class LinearFunctionApprox:
         self.trace.clear()
 
     def value (self, features):
-        return np.sum (self.weights.take(features))
+        return np.dot (self.weights.take(features), self.feature_weights)
 
     def add_features (self, features, scaling=1.0):
         self.trace.appendleft ((features, scaling))
@@ -201,14 +201,13 @@ class LinearFunctionApprox:
         code = """
             double amount = double(step_size) * double(scaling);
             for (int i = 0; i < features.size(); ++i) {
-                weights(features(i)) += amount;// * feature_weights(i);
+                weights(features(i)) += amount * feature_weights(i);
             }
         """
         names = [ 'step_size', 'feature_weights', 'weights', 'features', 'scaling' ]
         falloff = self.falloff
         for (features, scaling) in self.trace:
             weave.inline (code, names, type_converters=weave.converters.blitz)
-            #weights[features] += step_size * scaling
             step_size *= falloff
 
 

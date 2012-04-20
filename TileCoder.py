@@ -32,10 +32,12 @@ class TileCoder:
         self.features_start = np.cumsum ([0]+tiles_in_tiling[:-1], dtype=np.intp)
 
         if not uniform_weights:
-            feature_weights = 1.0 / (len (subspace_tilings) * np.array (subspace_tilings))
+            feature_weights = 1.0 / np.array (subspace_tilings)
             self.feature_weights = np.array (list (repeat_for_tilings (feature_weights)), dtype=np.float64)
         else:
-            self.feature_weights = np.ones (self.active_features, dtype=np.float64) / self.active_features
+            self.feature_weights = np.ones (self.active_features, dtype=np.float64)
+
+        self.feature_weights /= np.linalg.norm (self.feature_weights)
 
     def indices (self, coord):
 
