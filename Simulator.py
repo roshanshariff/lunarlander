@@ -121,7 +121,7 @@ class RigidBody:
 
 class LunarLanderSimulator:
 
-    def __init__ (self, dt):
+    def __init__ (self, dt=1.0/20):
 
         self.dt = dt
         self.gravity = 1.622 # m/s^2

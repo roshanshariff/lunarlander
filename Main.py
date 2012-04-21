@@ -6,7 +6,7 @@ from Framework import Framework
 from Simulator import LunarLanderSimulator
 from PolicyGradientAgent import PolicyGradientAgent
 
-simulator = LunarLanderSimulator(dt=1.0/30)
+simulator = LunarLanderSimulator()
 agent = PolicyGradientAgent (simulator, dt=0.5)
 framework = Framework (simulator, agent)
 
