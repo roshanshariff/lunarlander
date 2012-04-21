@@ -7,7 +7,7 @@ from TileCoder import TileCoder, HashingTileCoder
 
 class PolicyGradientAgent:
 
-    def __init__(self, simulator, dt, Lambda=0.9, alpha_v=0.1, alpha_u=0.1, num_features=2**20):
+    def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20):
 
         self.simulator = simulator
         self.dt = max(dt, self.simulator.dt)
