@@ -6,7 +6,7 @@ import sys
 
 class Framework:
 
-    def __init__ (self, simulator, agent, num_episodes=10000):
+    def __init__ (self, simulator, agent, num_episodes=20000):
         self.simulator = simulator
         self.agent = agent
         self.initialize()
