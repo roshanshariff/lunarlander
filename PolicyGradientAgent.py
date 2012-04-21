@@ -143,7 +143,7 @@ class PolicyGradientActor:
         self.alpha = alpha
         self.max_stdev = max_stdev
 
-        initial_stdev_value = -math.log((max_stdev-initial_stdev)/initial_stdev)
+        initial_stdev_value = math.log(initial_stdev/(max_stdev-initial_stdev))
 
         self.action_mean = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_mean)
         self.action_stdev = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_stdev_value)
@@ -154,7 +154,8 @@ class PolicyGradientActor:
 
     def action_dist (self):
         action_mean = self.action_mean.value (self.features)
-        action_stdev = self.max_stdev / (1.0 + math.exp(-self.action_stdev.value(self.features)))
+        action_stdev = self.action_stdev.value (self.features)
+        action_stdev = self.max_stdev * (1 + math.tanh(action_stdev/2)) / 2
         return (action_mean, action_stdev)
 
     def act (self, features):
@@ -184,7 +185,9 @@ class LinearFunctionApprox:
         self.weights = np.empty (tile_coder.num_features)
         self.weights.fill (initial_value/self.feature_weights.sum())
         self.falloff = falloff
-        self.trace = collections.deque (maxlen=int(math.ceil(math.log(threshold, falloff))))
+
+        trace_len = int(math.ceil(math.log(threshold, falloff))) if falloff > 0 else 1
+        self.trace = collections.deque (maxlen=trace_len)
 
     def initialize (self):
         self.trace.clear()
