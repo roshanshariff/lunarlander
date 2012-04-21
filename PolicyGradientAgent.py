@@ -171,7 +171,8 @@ class PolicyGradientActor:
         action_mean_gradient = std_action / action_stdev
         self.action_mean.add_features (self.features, action_mean_gradient)
 
-        action_stdev_gradient = self.max_stdev*(std_action**2 - 1)*(1-action_stdev)
+        #action_stdev_gradient = self.max_stdev*(std_action**2 - 1)*(1-action_stdev)
+        action_stdev_gradient = (std_action**2 - 1)*(1 - action_stdev/self.max_stdev)
         self.action_stdev.add_features (self.features, action_stdev_gradient)
 
         scaled_alpha = self.alpha * action_stdev**2
