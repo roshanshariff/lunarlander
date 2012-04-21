@@ -16,7 +16,7 @@ class PolicyGradientAgent:
 
         # TODO Set max_stdev in a more principled way
 
-        self.critic = Critic (self.tile_coder, Lambda, alpha_v, initial_value=0.0)
+        self.critic = Critic (self.tile_coder, Lambda, alpha_v, initial_value=1.0)
 
         self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=simulator.max_thrust/4,
                                                  initial_mean=1.0, initial_stdev=simulator.max_thrust/8)
