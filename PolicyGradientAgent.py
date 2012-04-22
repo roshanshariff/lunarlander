@@ -2,6 +2,7 @@ import math
 import numpy as np
 import collections
 import scipy.weave as weave
+import scipy.stats as stats
 
 from TileCoder import TileCoder, HashingTileCoder
 
@@ -18,11 +19,15 @@ class PolicyGradientAgent:
 
         self.critic = Critic (self.tile_coder, Lambda, alpha_v, initial_value=1.0)
 
-        self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=simulator.max_thrust/4,
-                                                 initial_mean=1.0, initial_stdev=simulator.max_thrust/8)
+        self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, 
+                                                 min_action=0.0, max_action=simulator.max_thrust, 
+                                                 max_sigma=simulator.max_thrust/2,
+                                                 initial_mu=1.0, initial_sigma=simulator.max_thrust/8)
 
-        self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, max_stdev=simulator.max_rcs/2,
-                                              initial_mean=0.0, initial_stdev=simulator.max_rcs/4)
+        self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, 
+                                              min_action=-simulator.max_rcs, max_action=simulator.max_rcs,
+                                              max_sigma=simulator.max_rcs,
+                                              initial_mu=0.0, initial_sigma=simulator.max_rcs/4)
 
         self.initialize()
 
@@ -138,46 +143,81 @@ class Critic:
 
 class PolicyGradientActor:
 
-    def __init__ (self, tile_coder, Lambda, alpha, max_stdev, initial_mean, initial_stdev, gamma=1.0):
+    def __init__ (self, tile_coder, Lambda, alpha, min_action, max_action, max_sigma, initial_mu, initial_sigma, gamma=1.0):
 
         self.alpha = alpha
-        self.max_stdev = max_stdev
+        self.min_action = min_action
+        self.max_action = max_action
+        self.max_sigma = max_sigma
 
-        initial_stdev_value = math.log(initial_stdev/(max_stdev-initial_stdev))
+        initial_sigma_value = math.log(initial_sigma/(max_sigma-initial_sigma))
 
-        self.action_mean = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_mean)
-        self.action_stdev = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_stdev_value)
+        self.mu = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_mu)
+        self.sigma = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_sigma_value)
 
     def initialize (self):
-        self.action_mean.initialize()
-        self.action_stdev.initialize()
+        self.mu.initialize()
+        self.sigma.initialize()
 
-    def action_dist (self):
-        action_mean = self.action_mean.value (self.features)
-        action_stdev = self.action_stdev.value (self.features)
-        action_stdev = self.max_stdev * (1 + math.tanh(action_stdev/2)) / 2
-        return (action_mean, action_stdev)
+    def action_dist(self):
+        mu = self.mu.value (self.features)
+        sigma = self.sigma.value (self.features)
+        sigma = self.max_sigma * (1 + math.tanh(sigma/2)) / 2
+        alpha = (self.min_action - mu) / sigma
+        beta = (self.max_action - mu) / sigma
+        return (alpha, beta, mu, sigma)
 
-    def act (self, features):
+    def act(self, features):
         self.features = features
-        self.action = np.random.normal(*self.action_dist())
+        self.action = stats.truncnorm.rvs(*self.action_dist())
         return self.action
-        
-    def learn (self, td_error):
 
-        (action_mean, action_stdev) = self.action_dist()
-        std_action = (self.action - action_mean) / action_stdev
+    def learn(self, td_error):
+        (alpha, beta, mu, sigma) = self.action_dist()
+        std_action = (self.action - mu) / sigma
 
-        action_mean_gradient = std_action / action_stdev
-        self.action_mean.add_features (self.features, action_mean_gradient)
+        trunc_weight = stats.norm.cdf(beta) - stats.norm.cdf(alpha)
+        trunc_grad_mu = (stats.norm.pdf(beta) - stats.norm.pdf(alpha)) / trunc_weight
+        trunc_grad_sigma = (beta*stats.norm.pdf(beta) - alpha*stats.norm.pdf(alpha)) / trunc_weight
+        if math.isnan(trunc_grad_sigma): trunc_grad_sigma = 0.0
 
-        #action_stdev_gradient = self.max_stdev*(std_action**2 - 1)*(1-action_stdev)
-        action_stdev_gradient = (std_action**2 - 1)*(1 - action_stdev/self.max_stdev)
-        self.action_stdev.add_features (self.features, action_stdev_gradient)
+        variance = sigma**2 * (1 - trunc_grad_sigma - trunc_grad_mu**2)
+        scaled_alpha = self.alpha * variance
 
-        scaled_alpha = self.alpha * action_stdev**2
+        mu_grad = (std_action + trunc_grad_mu) / sigma
+        self.action_mean.add_features(self.features, mu_grad)
         self.action_mean.update (scaled_alpha*td_error)
+
+        sigma_grad = (std_action**2 - 1 + trunc_grad_sigma)*(1 - sigma/self.max_sigma)
+        self.action_stdev.add_features(self.features, sigma_grad)
         self.action_stdev.update (scaled_alpha*td_error)
+
+   # def action_dist (self):
+   #      action_mean = self.action_mean.value (self.features)
+   #      action_stdev = self.action_stdev.value (self.features)
+   #      action_stdev = self.max_stdev * (1 + math.tanh(action_stdev/2)) / 2
+   #      return (action_mean, action_stdev)
+
+    # def old_act (self, features):
+    #     self.features = features
+    #     self.action = np.random.normal(*self.action_dist())
+    #     return self.action
+        
+    # def old_learn (self, td_error):
+
+    #     (action_mean, action_stdev) = self.action_dist()
+    #     std_action = (self.action - action_mean) / action_stdev
+
+    #     action_mean_gradient = std_action / action_stdev
+    #     self.action_mean.add_features (self.features, action_mean_gradient)
+
+    #     #action_stdev_gradient = self.max_stdev*(std_action**2 - 1)*(1-action_stdev)
+    #     action_stdev_gradient = (std_action**2 - 1)*(1 - action_stdev/self.max_stdev)
+    #     self.action_stdev.add_features (self.features, action_stdev_gradient)
+
+    #     scaled_alpha = self.alpha * action_stdev**2
+    #     self.action_mean.update (scaled_alpha*td_error)
+    #     self.action_stdev.update (scaled_alpha*td_error)
 
 class LinearFunctionApprox:
 
