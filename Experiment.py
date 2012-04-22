@@ -8,6 +8,7 @@ simulator = LunarLanderSimulator()
 
 def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs, num_episodes=20000, num_procs=None):
     returns = np.empty((num_runs, num_episodes), dtype=np.float64)
+    results.append(returns)
     for i in xrange(num_runs):
         print 'Lambda = %g, Alpha = %g, p = %g Run %d:'%(Lambda, alpha, tile_weight_exponent, i)
         agent = PolicyGradientAgent (simulator, 
@@ -31,5 +32,5 @@ if __name__ == "__main__":
     params = [ (0.75, 0.1, 0.5, 10) ]
     results = []
     for ps in params:
-        results.append(run_experiment(*ps))
+        run_experiment(*ps)
     
