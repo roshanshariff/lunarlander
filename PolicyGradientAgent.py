@@ -103,18 +103,22 @@ class PolicyGradientAgent:
 
     def save_state (self, savefile='data/saved_state.npy'):
         np.save (savefile, np.vstack ((self.critic.value.weights,
-                                       self.thrust_actor.action_mean.weights,
-                                       self.thrust_actor.action_stdev.weights,
-                                       self.rcs_actor.action_mean.weights,
-                                       self.rcs_actor.action_stdev.weights)))
+                                       self.thrust_actor.mu.weights,
+                                       self.thrust_actor.sigma.weights,
+                                       self.rcs_actor.mu.weights,
+                                       self.rcs_actor.sigma.weights)))
 
     def load_state (self, savefile='data/saved_state.npy', mmap_mode=None):
         state = np.array (np.load (savefile, mmap_mode), copy=False)
         (self.critic.value.weights,
-         self.thrust_actor.action_mean.weights,
-         self.thrust_actor.action_stdev.weights,
-         self.rcs_actor.action_mean.weights,
-         self.rcs_actor.action_stdev.weights) = state
+         self.thrust_actor.mu.weights,
+         self.thrust_actor.sigma.weights,
+         self.rcs_actor.mu.weights,
+         self.rcs_actor.sigma.weights) = state
+
+    def persist_state (self, savefile='data/saved_state.npy', readonly=False):
+        if not readonly: self.save_state (savefile)
+        self.load_state (savefile, mmap_mode='r' if readonly else 'r+')
 
 class Critic:
 
@@ -185,12 +189,12 @@ class PolicyGradientActor:
         scaled_alpha = self.alpha * variance
 
         mu_grad = (std_action + trunc_grad_mu) / sigma
-        self.action_mean.add_features(self.features, mu_grad)
-        self.action_mean.update (scaled_alpha*td_error)
+        self.mu.add_features(self.features, mu_grad)
+        self.mu.update (scaled_alpha*td_error)
 
         sigma_grad = (std_action**2 - 1 + trunc_grad_sigma)*(1 - sigma/self.max_sigma)
-        self.action_stdev.add_features(self.features, sigma_grad)
-        self.action_stdev.update (scaled_alpha*td_error)
+        self.sigma.add_features(self.features, sigma_grad)
+        self.sigma.update (scaled_alpha*td_error)
 
    # def action_dist (self):
    #      action_mean = self.action_mean.value (self.features)
