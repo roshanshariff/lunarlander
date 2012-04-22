@@ -32,8 +32,8 @@ class RigidBody:
         self.colliders = np.array (colliders, dtype=[('pos', np.float64, 2), ('strength', np.float64, (2,2))])
         self.bounding_radius = max ([ np.linalg.norm(c['pos']) for c in self.colliders ])
 
-        self.collided = np.zeros_like (self.colliders, dtype=np.bool)
-        self.contacted = np.zeros_like (self.colliders, dtype=np.bool)
+        self.collided = np.zeros (self.colliders.size, dtype=np.bool)
+        self.contacted = np.zeros (self.colliders.size, dtype=np.bool)
         self.impulses = np.zeros_like (self.colliders['pos'])
         self.breakage = 0.0
 
@@ -53,7 +53,7 @@ class RigidBody:
             new_pos = self.pos + dt*(self.vel + dt*force/self.mass)
             new_rot = self.rot + dt*(self.rot_vel + dt*torque/self.mom_inertia)
 
-            collided = np.zeros_like (self.colliders, dtype=np.bool)
+            collided = np.zeros (self.colliders.size, dtype=np.bool)
             if new_pos[1] > self.bounding_radius: return collided
 
             sin_new_rot = math.sin(new_rot)
