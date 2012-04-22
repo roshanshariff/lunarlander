@@ -6,7 +6,7 @@ from PolicyGradientAgent import PolicyGradientAgent
 
 simulator = LunarLanderSimulator()
 
-def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs, num_episodes=200000, num_procs=None):
+def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs, num_episodes=20000, num_procs=None):
     returns = np.empty((num_runs, num_episodes), dtype=np.float64)
     for i in xrange(num_runs):
         print 'Lambda = %g, Alpha = %g, p = %g Run %d:'%(Lambda, alpha, tile_weight_exponent, i)
