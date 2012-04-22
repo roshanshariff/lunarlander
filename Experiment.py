@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 from Framework import Framework
 from Simulator import LunarLanderSimulator
@@ -18,7 +19,8 @@ def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs, num_episodes=2
         framework = Framework(simulator, agent, num_episodes=num_episodes)
         framework.train(num_procs=num_procs)
         returns[i] = framework.returns
-    filename = 'data/experiment_%g_%g_%g.npy'%(Lambda,alpha,tile_weight_exponent)
+    random = np.random.randint(sys.maxsize)
+    filename = 'data/experiment_%d_%g_%g_%g.npy'%(random, Lambda,alpha,tile_weight_exponent)
     np.save (filename, returns)
     return returns
 
