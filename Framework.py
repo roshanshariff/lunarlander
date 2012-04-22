@@ -13,7 +13,7 @@ class Framework:
 
         self.lock = mp.Lock()
         self.counter = mp.RawValue(ctypes.c_uint, 0)
-        self.returns = mp.RawArray(ctypes.c_double, num_episodes)
+        self.returns = np.frombuffer(mp.RawArray(ctypes.c_double, num_episodes))
 
     def initialize (self):
         self.initialize_simulator()
@@ -90,7 +90,8 @@ class Framework:
         reward -= 0.01 * self.simulator.main_throttle()
         return reward
 
-    def train (self, time_limit=600.0, num_procs=mp.cpu_count()):
+    def train (self, time_limit=600.0, num_procs=None):
+        if num_procs == None: num_procs = mp.cpu_count()
         def proc (seed):
             np.random.seed (seed)
             while True:

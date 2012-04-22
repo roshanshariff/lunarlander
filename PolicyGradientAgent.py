@@ -1,6 +1,8 @@
 import math
 import numpy as np
 import collections
+import ctypes
+import multiprocessing as mp
 import scipy.weave as weave
 import scipy.stats as stats
 
@@ -8,12 +10,12 @@ from TileCoder import TileCoder, HashingTileCoder
 
 class PolicyGradientAgent:
 
-    def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20):
+    def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20, tile_weight_exponent=0.5):
 
         self.simulator = simulator
         self.dt = max(dt, self.simulator.dt)
 
-        self.tile_coder = HashingTileCoder (self.make_tile_coder(), num_features)
+        self.tile_coder = HashingTileCoder (self.make_tile_coder(tile_weight_exponent), num_features)
 
         # TODO Set max_stdev in a more principled way
 
@@ -31,7 +33,7 @@ class PolicyGradientAgent:
 
         self.initialize()
 
-    def make_tile_coder (self):
+    def make_tile_coder (self, tile_weight_exponent):
         #                            xpos   ypos  xvel  yvel        rot     rotvel
         state_signed  = np.array ([ False, False, True, True,      True,      True ])
         state_bounded = np.array ([  True,  True, True, True,     False,      True ])
@@ -53,7 +55,7 @@ class PolicyGradientAgent:
         num_tiles[state_signed] *= 2
         num_tiles[state_bounded] += 1
 
-        return TileCoder (tile_size, num_tiles, num_offsets, [0,1,2,3,6])
+        return TileCoder (tile_size, num_tiles, num_offsets, [0,1,2,3,6], tile_weight_exponent)
 
     def features (self):
 
@@ -101,24 +103,36 @@ class PolicyGradientAgent:
         if not terminal:
             self.take_action (features, xsign)
 
-    def save_state (self, savefile='data/saved_state.npy'):
-        np.save (savefile, np.vstack ((self.critic.value.weights,
-                                       self.thrust_actor.mu.weights,
-                                       self.thrust_actor.sigma.weights,
-                                       self.rcs_actor.mu.weights,
-                                       self.rcs_actor.sigma.weights)))
+    def get_state(self):
+        return np.vstack ((self.critic.value.weights,
+                           self.thrust_actor.mu.weights,
+                           self.thrust_actor.sigma.weights,
+                           self.rcs_actor.mu.weights,
+                           self.rcs_actor.sigma.weights))
 
-    def load_state (self, savefile='data/saved_state.npy', mmap_mode=None):
-        state = np.array (np.load (savefile, mmap_mode), copy=False)
+    def set_state(self, state):
+        state.shape = (5, self.tile_coder.num_features)
         (self.critic.value.weights,
          self.thrust_actor.mu.weights,
          self.thrust_actor.sigma.weights,
          self.rcs_actor.mu.weights,
          self.rcs_actor.sigma.weights) = state
 
-    def persist_state (self, savefile='data/saved_state.npy', readonly=False):
-        if not readonly: self.save_state (savefile)
-        self.load_state (savefile, mmap_mode='r' if readonly else 'r+')
+    def save_state (self, savefile='data/saved_state.npy'):
+        np.save (savefile, self.get_state())
+
+    def load_state (self, savefile='data/saved_state.npy', mmap_mode=None):
+        state = np.array (np.load (savefile, mmap_mode), copy=False)
+        self.set_state(state)
+
+    def persist_state(self, savefile=None, readonly=False):
+        if savefile == None:
+            state = np.frombuffer(mp.RawArray(ctypes.c_double, 5*self.tile_coder.num_features))
+            state[:] = self.get_state().flat
+            self.set_state(state)
+        else:
+            if not readonly: self.save_state(savefile)
+            self.load_state (savefile, mmap_mode='r' if readonly else 'r+')
 
 class Critic:
 
