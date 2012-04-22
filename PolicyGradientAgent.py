@@ -39,7 +39,7 @@ class PolicyGradientAgent:
         state_bounded = np.array ([  True,  True, True, True,     False,      True ])
         tile_size     = np.array ([    5.,    5.,   2.,   2., math.pi/2, math.pi/6 ])
         num_tiles     = np.array ([     6,     4,    4,    4,         2,         3 ])
-        num_offsets   = np.array ([     3,     3,    4,    4,         8,         4 ])
+        num_offsets   = np.array ([     2,     2,    4,    4,         8,         4 ])
 
         self.max_state = (tile_size * num_tiles) - 1e-8
 
@@ -55,7 +55,7 @@ class PolicyGradientAgent:
         num_tiles[state_signed] *= 2
         num_tiles[state_bounded] += 1
 
-        return TileCoder (tile_size, num_tiles, num_offsets, [0,1,2,3,6], tile_weight_exponent)
+        return TileCoder (tile_size, num_tiles, num_offsets, [0,1,2,6], tile_weight_exponent)
 
     def features (self):
 
