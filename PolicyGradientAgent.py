@@ -187,7 +187,11 @@ class PolicyGradientActor:
 
     def act(self, features):
         self.features = features
-        self.action = stats.truncnorm.rvs(*self.action_dist())
+        try:
+            self.action = stats.truncnorm.rvs(*self.action_dist())
+        except:
+            print self.action_dist()
+            raise
         return self.action
 
     def learn(self, td_error):

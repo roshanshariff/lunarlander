@@ -9,7 +9,7 @@ from PolicyGradientAgent import PolicyGradientAgent
 
 simulator = LunarLanderSimulator()
 
-def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs,num_episodes=20000, num_procs=None, suffixed=""):
+def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs,num_episodes=20000, num_procs=None, suffix=""):
     returns = np.empty((num_runs, num_episodes), dtype=np.float64)
     results.append(returns)
     for i in xrange(num_runs):
