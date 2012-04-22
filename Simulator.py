@@ -29,6 +29,7 @@ class RigidBody:
         self.mu_s = float(mu_s)
         self.mu_k = float(mu_k)
 
+        num_colliders = len(colliders)
         self.colliders = np.array (colliders, dtype=[('pos', np.float64, 2), ('strength', np.float64, (2,2))])
         self.bounding_radius = max ([ np.linalg.norm(c['pos']) for c in self.colliders ])
 
