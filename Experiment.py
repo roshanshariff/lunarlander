@@ -20,7 +20,7 @@ def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs, num_episodes=2
         framework.train(num_procs=num_procs)
         returns[i] = framework.returns
     random = np.random.randint(sys.maxsize)
-    filename = 'data/experiment_%d_%g_%g_%g.npy'%(random, Lambda,alpha,tile_weight_exponent)
+    filename = 'data/experiment_%g_%g_%g_%d.npy'%(Lambda,alpha,tile_weight_exponent, random)
     np.save (filename, returns)
     return returns
 
