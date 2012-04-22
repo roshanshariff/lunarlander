@@ -31,7 +31,7 @@ def make_plot():
         
 
 if __name__ == "__main__":
-    params = [ (0.75, 0.1, 0.5, 10) ]
+    params = [ (0.75, 0.1, 0.5, 1) ]
     results = []
     for ps in params:
         run_experiment(*ps)
