@@ -4,7 +4,7 @@ import itertools
 
 class TileCoder:
 
-    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims, uniform_weights=False):
+    def __init__ (self, tile_size, num_tiles, num_offsets, subspace_dims, weight_exponent=0.0):
 
         self.tile_size = np.array (tile_size, dtype=np.float64)
         self.num_tiles = np.array (num_tiles, dtype=np.intp)
@@ -31,12 +31,8 @@ class TileCoder:
         self.num_features = sum (tiles_in_tiling)
         self.features_start = np.cumsum ([0]+tiles_in_tiling[:-1], dtype=np.intp)
 
-        if not uniform_weights:
-            feature_weights = 1.0 / np.sqrt (np.array (subspace_tilings))
-            self.feature_weights = np.array (list (repeat_for_tilings (feature_weights)), dtype=np.float64)
-        else:
-            self.feature_weights = np.ones (self.active_features, dtype=np.float64)
-
+        feature_weights = np.array(subspace_tilings) ** (-weight_exponent)
+        self.feature_weights = np.array (list (repeat_for_tilings (feature_weights)), dtype=np.float64)
         self.feature_weights /= np.linalg.norm (self.feature_weights)
 
     def indices (self, coord):

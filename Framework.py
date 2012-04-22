@@ -72,6 +72,11 @@ class Framework:
 
         return True
 
+    def terminate_with_reward(self, reward):
+        self.Return += reward
+        self.agent.update(reward, terminal=True)
+        self.initialized = False
+    
     def reward (self):
         reward = 0.0
         if self.simulator.crashed or self.simulator.landed:
@@ -90,7 +95,7 @@ class Framework:
             np.random.seed (seed)
             while True:
                 time_exceeded = self.run(dt=time_limit)
-                if time_exceeded: self.initialized = False
+                if time_exceeded: self.terminate_with_reward(reward=-10.0)
                 with self.lock:
                     i = int(self.counter.value)
                     if i < len(self.returns):

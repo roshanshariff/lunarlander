@@ -32,14 +32,14 @@ class PolicyGradientAgent:
         self.initialize()
 
     def make_tile_coder (self):
-
+        #                            xpos   ypos  xvel  yvel        rot     rotvel
         state_signed  = np.array ([ False, False, True, True,      True,      True ])
         state_bounded = np.array ([  True,  True, True, True,     False,      True ])
         tile_size     = np.array ([    5.,    5.,   2.,   2., math.pi/2, math.pi/6 ])
         num_tiles     = np.array ([     6,     4,    4,    4,         2,         3 ])
-        num_offsets   = np.array ([     2,     2,    4,    4,         8,         4 ])
+        num_offsets   = np.array ([     3,     3,    4,    4,         8,         4 ])
 
-        self.max_state = (tile_size * num_tiles) - 1e-10
+        self.max_state = (tile_size * num_tiles) - 1e-8
 
         self.min_state = -self.max_state
         self.min_state[np.logical_not(state_signed)] = 0.0
@@ -53,7 +53,7 @@ class PolicyGradientAgent:
         num_tiles[state_signed] *= 2
         num_tiles[state_bounded] += 1
 
-        return TileCoder (tile_size, num_tiles, num_offsets, [0,1,2,6])
+        return TileCoder (tile_size, num_tiles, num_offsets, [0,1,2,3,6])
 
     def features (self):
 
