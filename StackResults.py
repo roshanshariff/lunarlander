@@ -9,4 +9,4 @@ results = []
 for i in xrange(2, len(sys.argv)):
     results.append (np.load (sys.argv[i]))
 
-np.save (output_filename, np.array(results))
+np.save (output_filename, np.squeeze(np.array(results)))
