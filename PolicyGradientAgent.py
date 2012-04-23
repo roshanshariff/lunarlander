@@ -207,7 +207,7 @@ class PolicyGradientActor:
         (alpha, beta, mu, sigma) = self.action_dist()
         std_action = (self.action - mu) / sigma
 
-        if self.trunc_norm:
+        if self.trunc_normal:
             trunc_weight = stats.norm.cdf(beta) - stats.norm.cdf(alpha)
             trunc_grad_mu = (stats.norm.pdf(beta) - stats.norm.pdf(alpha)) / trunc_weight
             trunc_grad_sigma = (beta*stats.norm.pdf(beta) - alpha*stats.norm.pdf(alpha)) / trunc_weight

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+import os
 import sys
 
 from Framework import Framework
@@ -23,7 +24,13 @@ def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs,num_episodes=20
         framework.train(num_procs=num_procs)
         returns[i] = framework.returns
     random = np.random.randint(sys.maxsize)
-    filename = 'data/%s/experiment_%g_%g_%g_%d.npy'%(name,Lambda,alpha,tile_weight_exponent, random)
+
+    directory = 'data/%s/' % (name)
+    filename = directory + ('%d.npy' % (random))
+    try:
+        os.makedirs(directory)
+    except OSError:
+        pass
     np.save (filename, returns)
     return returns
 
@@ -33,7 +40,7 @@ def make_plot():
     legend (loc='lower left')
         
 if __name__ == "__main__":
-    params = [ (0.75, 0.1, 0.5, 5, 5000, None, "truncnorm") ]
+    params = [ (0.75, 0.1, 0.5, 1, 20000, 2, "weighted_trunc_normal") ]
     results = []
     for ps in params:
         run_experiment(*ps)
