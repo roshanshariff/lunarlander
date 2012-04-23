@@ -207,10 +207,14 @@ class PolicyGradientActor:
         (alpha, beta, mu, sigma) = self.action_dist()
         std_action = (self.action - mu) / sigma
 
-        trunc_weight = stats.norm.cdf(beta) - stats.norm.cdf(alpha)
-        trunc_grad_mu = (stats.norm.pdf(beta) - stats.norm.pdf(alpha)) / trunc_weight
-        trunc_grad_sigma = (beta*stats.norm.pdf(beta) - alpha*stats.norm.pdf(alpha)) / trunc_weight
-        if math.isnan(trunc_grad_sigma): trunc_grad_sigma = 0.0
+        if self.trunc_norm:
+            trunc_weight = stats.norm.cdf(beta) - stats.norm.cdf(alpha)
+            trunc_grad_mu = (stats.norm.pdf(beta) - stats.norm.pdf(alpha)) / trunc_weight
+            trunc_grad_sigma = (beta*stats.norm.pdf(beta) - alpha*stats.norm.pdf(alpha)) / trunc_weight
+            if math.isnan(trunc_grad_sigma): trunc_grad_sigma = 0.0
+        else:
+            trunc_grad_mu = 0.0
+            trunc_grad_sigma = 0.0
 
         variance = sigma**2 * (1 - trunc_grad_sigma - trunc_grad_mu**2)
         scaled_alpha = self.alpha * variance
@@ -233,7 +237,7 @@ class PolicyGradientActor:
     # def old_act (self, features):
     #     self.features = features
     #     self.action = np.random.normal(*self.action_dist())
-2    #     return self.action
+    #     return self.action
         
     # def old_learn (self, td_error):
 
