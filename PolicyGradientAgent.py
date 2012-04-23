@@ -259,8 +259,21 @@ class LinearFunctionApprox:
     def initialize (self):
         self.trace.clear()
 
+    # def value (self, features):
+    #     return np.dot (self.weights.take(features), self.feature_weights)
+
     def value (self, features):
-        return np.dot (self.weights.take(features), self.feature_weights)
+        feature_weights = self.feature_weights
+        weights = self.weights
+        code = """
+            double value = 0.0;
+            for (int i = 0; i < features.size(); ++i) {
+                value += weights(features(i)) * feature_weights(i);
+            }
+            return_val = value; 
+        """
+        names = [ 'features', 'feature_weights', 'weights' ]
+        return weave.inline (code, names, type_converters=weave.converters.blitz)
 
     def add_features (self, features, scaling=1.0):
         self.trace.appendleft ((features, scaling))
