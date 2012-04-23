@@ -178,9 +178,15 @@ class PolicyGradientActor:
         self.sigma.initialize()
 
     def action_dist(self):
+
         mu = self.mu.value (self.features)
         sigma = self.sigma.value (self.features)
         sigma = self.max_sigma * (1 + math.tanh(sigma/2)) / 2
+
+        max_mu = self.max_action + 3*sigma
+        min_mu = self.min_action - 3*sigma
+        mu = max (min_mu, min (mu, max_mu))
+
         alpha = (self.min_action - mu) / sigma
         beta = (self.max_action - mu) / sigma
         return (alpha, beta, mu, sigma)
