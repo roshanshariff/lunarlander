@@ -10,26 +10,38 @@ from TileCoder import TileCoder, HashingTileCoder
 
 class PolicyGradientAgent:
 
-    def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20, tile_weight_exponent=0.5):
+    def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20, tile_weight_exponent=0.5, 
+                 trunc_normal=True):
 
         self.simulator = simulator
         self.dt = max(dt, self.simulator.dt)
 
         self.tile_coder = HashingTileCoder (self.make_tile_coder(tile_weight_exponent), num_features)
 
-        # TODO Set max_stdev in a more principled way
+        # if trunc_normal:
+        #     initial_thrust_sigma = simulator.max_thrust / 8
+        #     initial_thrust_mu = 1.0
+        #     initial_rcs_sigma = simulator.max_rcs / 4
+        #     initial_rcs_mu = 0.0
+        # else:
+        initial_thrust_sigma = simulator.max_thrust / 10
+        initial_thrust_mu = 0.5
+        initial_rcs_sigma = simulator.max_rcs / 6
+        initial_rcs_mu = 0.0
 
         self.critic = Critic (self.tile_coder, Lambda, alpha_v, initial_value=1.0)
 
         self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, 
                                                  min_action=0.0, max_action=simulator.max_thrust, 
                                                  min_sigma=simulator.max_thrust/64, max_sigma=simulator.max_thrust/2,
-                                                 initial_mu=1.0, initial_sigma=simulator.max_thrust/8)
+                                                 initial_mu=initial_thrust_mu, initial_sigma=initial_thrust_sigma, 
+                                                 trunc_normal=trunc_normal)
 
         self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, 
                                               min_action=-simulator.max_rcs, max_action=simulator.max_rcs,
                                               min_sigma=simulator.max_rcs/32, max_sigma=simulator.max_rcs,
-                                              initial_mu=0.0, initial_sigma=simulator.max_rcs/4)
+                                              initial_mu=initial_rcs_mu, initial_sigma=initial_rcs_sigma,
+                                              trunc_normal=trunc_normal)
 
         self.initialize()
 
@@ -71,14 +83,14 @@ class PolicyGradientAgent:
         return (self.tile_coder.indices(state), xsign)
 
     def take_action (self, features, xsign):
-
-        def clamp (value, low, high):
-            value = low + math.fmod (abs(value-low), 2*(high-low))
-            if value > high: value = 2*high - value
-            return value
-
-        thrust = clamp (self.thrust_actor.act(features), 0.0, self.simulator.max_thrust)
-        rcs = clamp (self.rcs_actor.act(features), -self.simulator.max_rcs, self.simulator.max_rcs)
+        # def clamp (value, low, high):
+        #     value = low + math.fmod (abs(value-low), 2*(high-low))
+        #     if value > high: value = 2*high - value
+        #     return value
+        # thrust = clamp (self.thrust_actor.act(features), 0.0, self.simulator.max_thrust)
+        # rcs = clamp (self.rcs_actor.act(features), -self.simulator.max_rcs, self.simulator.max_rcs)
+        thrust = self.thrust_actor.act(features)
+        rcs = self.rcs_actor.act(features)
         self.simulator.set_action (thrust, xsign*rcs)
 
     def initialize (self):
@@ -161,7 +173,8 @@ class Critic:
 
 class PolicyGradientActor:
 
-    def __init__ (self, tile_coder, Lambda, alpha, min_action, max_action, min_sigma, max_sigma, initial_mu, initial_sigma, gamma=1.0):
+    def __init__ (self, tile_coder, Lambda, alpha, min_action, max_action, min_sigma, max_sigma, initial_mu, initial_sigma, gamma=1.0, 
+                  trunc_normal=True):
 
         self.alpha = alpha
         self.min_action = min_action
@@ -173,6 +186,8 @@ class PolicyGradientActor:
 
         self.mu = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_mu)
         self.sigma = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_sigma_value)
+        
+        self.trunc_normal = trunc_normal
 
     def initialize (self):
         self.mu.initialize()
@@ -188,13 +203,18 @@ class PolicyGradientActor:
         min_mu = self.min_action - 3.0*sigma
         mu = min (max (min_mu, mu), max_mu)
 
+        if not self.trunc_normal: return (float('-inf'), float('inf'), mu, sigma)
+
         alpha = (self.min_action - mu) / sigma
         beta = (self.max_action - mu) / sigma
         return (alpha, beta, mu, sigma)
 
     def act(self, features):
         self.features = features
-        self.action = stats.truncnorm.rvs(*self.action_dist())
+        if self.trunc_normal: 
+            self.action = stats.truncnorm.rvs(*self.action_dist())
+        else:
+            self.action = np.random.normal(*self.action_dist()[2:])
         return self.action
 
     def learn(self, td_error):
@@ -218,11 +238,11 @@ class PolicyGradientActor:
         self.sigma.add_features(self.features, sigma_grad)
         self.sigma.update (scaled_alpha*td_error)
 
-   # def action_dist (self):
-   #      action_mean = self.action_mean.value (self.features)
-   #      action_stdev = self.action_stdev.value (self.features)
-   #      action_stdev = self.max_stdev * (1 + math.tanh(action_stdev/2)) / 2
-   #      return (action_mean, action_stdev)
+    # def action_dist (self):
+    #      action_mean = self.action_mean.value (self.features)
+    #      action_stdev = self.action_stdev.value (self.features)
+    #      action_stdev = self.max_stdev * (1 + math.tanh(action_stdev/2)) / 2
+    #      return (action_mean, action_stdev)
 
     # def old_act (self, features):
     #     self.features = features

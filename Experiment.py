@@ -16,7 +16,8 @@ def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs,num_episodes=20
         print 'Lambda = %g, Alpha = %g, p = %g Run %d:'%(Lambda, alpha, tile_weight_exponent, i)
         agent = PolicyGradientAgent (simulator, 
                                      Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
-                                     tile_weight_exponent=tile_weight_exponent)
+                                     tile_weight_exponent=tile_weight_exponent,
+                                     trunc_normal=True)
         agent.persist_state()
         framework = Framework(simulator, agent, num_episodes=num_episodes)
         framework.train(num_procs=num_procs)
@@ -31,9 +32,8 @@ def make_plot():
         plot(returns.mean(axis=0).cumsum(), label=r'$\lambda=%g,\alpha=%g,p=%g$'%params[i][:3])
     legend (loc='lower left')
         
-
 if __name__ == "__main__":
-    params = [ (0.75, 0.1, 0.5, 1, 20000, None, "weightedno0") ]
+    params = [ (0.75, 0.1, 0.5, 5, 5000, None, "truncnorm") ]
     results = []
     for ps in params:
         run_experiment(*ps)
