@@ -42,6 +42,48 @@ class RigidBody:
         self.vel += impulse / self.mass
         self.rot_vel += np.cross(position, impulse) / self.mom_inertia
 
+    def process_collisions (self, restitution, colliders_dpos_dtheta, new_pos, new_rot, collided):
+
+        if new_pos[1] > self.bounding_radius: return False
+
+        rot_matrix = np.empty ((2,2))
+        rot_matrix[0,0] = math.cos (new_rot)
+        rot_matrix[1,0] = math.sin (new_rot)
+        rot_matrix[0,1] = -rot_matrix[1,0]
+        rot_matrix[1,1] = rot_matrix[0,0]
+
+        colliders_rel_pos = np.dot (rot_matrix, self.colliders['pos'].T).T
+
+        collisions = False
+
+        for i in np.argsort(colliders_rel_pos[:,1]):
+
+            if new_pos[1] + colliders_rel_pos[i,1] > 0: break
+
+            collider_vel = self.vel + self.rot_vel*colliders_dpos_dtheta[i]
+            if collider_vel[1] > 0: continue
+
+            K = np.array([colliders_rel_pos[i,1], -colliders_rel_pos[i,0]])
+            K = np.outer(K,K)
+            K /= self.mom_inertia
+            K += np.eye(2)/self.mass
+
+            impulse = np.linalg.solve(K, [-collider_vel[0], -(1+restitution)*collider_vel[1]])
+
+            if abs(impulse[0]) > self.mu_s*impulse[1]:
+                friction = self.mu_k
+                if collider_vel[0] > 0: friction = -friction
+                impulse[1] = -(1+restitution) * collider_vel[1] / (friction*K[1,0] + K[1,1])
+                impulse[0] = impulse[1] * friction
+
+            self.apply_impulse (colliders_rel_pos[i], impulse)
+            collided[i] |= True
+            collisions = True
+
+            self.impulses[i] += np.dot (rot_matrix.T, impulse)
+
+        return collisions
+
     def update (self, dt, force=np.zeros(2), torque=0.0):
 
         sin_rot = math.sin(self.rot)
@@ -49,67 +91,31 @@ class RigidBody:
         colliders_dpos_dtheta = np.dot([[-sin_rot, -cos_rot], [cos_rot, -sin_rot]],
                                        self.colliders['pos'].T).T
 
-        def process_collision (restitution):
-
-            new_pos = self.pos + dt*(self.vel + dt*force/self.mass)
-            new_rot = self.rot + dt*(self.rot_vel + dt*torque/self.mom_inertia)
-
-            collided = np.zeros (self.colliders.size, dtype=np.bool)
-            if new_pos[1] > self.bounding_radius: return collided
-
-            sin_new_rot = math.sin(new_rot)
-            cos_new_rot = math.cos(new_rot)
-            colliders_rel_pos = np.dot([[cos_new_rot, -sin_new_rot], [sin_new_rot, cos_new_rot]],
-                                       self.colliders['pos'].T).T
-
-            for i in np.argsort(colliders_rel_pos[:,1]):
-
-                if new_pos[1] + colliders_rel_pos[i,1] > 0: break
-
-                collider_vel = self.vel + self.rot_vel*colliders_dpos_dtheta[i]
-                if collider_vel[1] > 0: continue
-
-                K = np.array([colliders_rel_pos[i,1], -colliders_rel_pos[i,0]])
-                K = np.outer(K,K)
-                K /= self.mom_inertia
-                K += np.eye(2)/self.mass
-
-                impulse = np.linalg.solve(K, [-collider_vel[0], -(1+restitution)*collider_vel[1]])
-
-                if abs(impulse[0]) > self.mu_s*impulse[1]:
-                    friction = self.mu_k
-                    if collider_vel[0] > 0: friction = -friction
-                    impulse[1] = -(1+restitution) * collider_vel[1] / (friction*K[1,0] + K[1,1])
-                    impulse[0] = impulse[1] * friction
-
-                self.apply_impulse (colliders_rel_pos[i], impulse)
-                collided[i] = True
-
-                self.impulses[i] += np.dot([[cos_new_rot, sin_new_rot], [-sin_new_rot, cos_new_rot]],
-                                           impulse)
-
-            return collided
+        delta_vel = force * (dt / self.mass)
+        delta_rot_vel = torque * (dt / self.mom_inertia)
 
         # Collision
         self.impulses.fill(0.0)
         self.collided.fill(False)
-        for i in xrange(10):
-            collided = process_collision(self.restitution)
-            if np.any(collided): self.collided |= collided
-            else: break
+        for i in xrange(5):
+            new_pos = self.pos + dt*(self.vel + delta_vel)
+            new_rot = self.rot + dt*(self.rot_vel + delta_rot_vel)
+            if not self.process_collisions (self.restitution, colliders_dpos_dtheta,
+                                            new_pos, new_rot, self.collided):
+                break
 
         # Velocity update
-        self.vel += dt * force/self.mass
-        force.fill(0.0)
-        self.rot_vel += dt * torque/self.mom_inertia
-        torque = 0.0
+        self.vel += delta_vel
+        self.rot_vel += delta_rot_vel
 
         # Contact
         self.contacted.fill(False)
         for i in xrange(10):
-            contacted = process_collision((i-9)/10.0)
-            if np.any(contacted): self.contacted |= contacted
-            else: break
+            new_pos = self.pos + dt*self.vel
+            new_rot = self.rot + dt*self.rot_vel
+            if not self.process_collisions ((i-9)/10.0, colliders_dpos_dtheta,
+                                            new_pos, new_rot, self.contacted):
+                break
         
         # Position update
         self.pos += dt * self.vel
