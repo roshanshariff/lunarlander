@@ -88,7 +88,7 @@ class Framework:
 
             if self.limit_time <= 0.0:
 
-                (state, xsign) = self.simulator.state()
+                (state, xsign) = self.simulator_state()
                 self.agent.update (state, self.time_limit_reward, True, learn)
                 self.Return += self.time_limit_reward
 
