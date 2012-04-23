@@ -23,12 +23,12 @@ class PolicyGradientAgent:
 
         self.thrust_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, 
                                                  min_action=0.0, max_action=simulator.max_thrust, 
-                                                 max_sigma=simulator.max_thrust/2,
+                                                 min_sigma=simulator.max_thrust/64, max_sigma=simulator.max_thrust/2,
                                                  initial_mu=1.0, initial_sigma=simulator.max_thrust/8)
 
         self.rcs_actor = PolicyGradientActor (self.tile_coder, Lambda, alpha_u, 
                                               min_action=-simulator.max_rcs, max_action=simulator.max_rcs,
-                                              max_sigma=simulator.max_rcs,
+                                              min_sigma=simulator.max_rcs/32, max_sigma=simulator.max_rcs,
                                               initial_mu=0.0, initial_sigma=simulator.max_rcs/4)
 
         self.initialize()
@@ -161,14 +161,15 @@ class Critic:
 
 class PolicyGradientActor:
 
-    def __init__ (self, tile_coder, Lambda, alpha, min_action, max_action, max_sigma, initial_mu, initial_sigma, gamma=1.0):
+    def __init__ (self, tile_coder, Lambda, alpha, min_action, max_action, min_sigma, max_sigma, initial_mu, initial_sigma, gamma=1.0):
 
         self.alpha = alpha
         self.min_action = min_action
         self.max_action = max_action
-        self.max_sigma = max_sigma
+        self.min_sigma = min_sigma
+        self.sigma_range = max_sigma - min_sigma
 
-        initial_sigma_value = math.log(initial_sigma/(max_sigma-initial_sigma))
+        initial_sigma_value = math.log((initial_sigma-self.min_sigma)/(max_sigma-initial_sigma)) 
 
         self.mu = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_mu)
         self.sigma = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_sigma_value)
@@ -180,18 +181,14 @@ class PolicyGradientActor:
     def action_dist(self):
         mu = self.mu.value (self.features)
         sigma = self.sigma.value (self.features)
-        sigma = self.max_sigma * (1 + math.tanh(sigma/2)) / 2
+        sigma = self.min_sigma + self.sigma_range * (1 + math.tanh(sigma/2)) / 2
         alpha = (self.min_action - mu) / sigma
         beta = (self.max_action - mu) / sigma
         return (alpha, beta, mu, sigma)
 
     def act(self, features):
         self.features = features
-        try:
-            self.action = stats.truncnorm.rvs(*self.action_dist())
-        except:
-            print self.action_dist()
-            raise
+        self.action = stats.truncnorm.rvs(*self.action_dist())
         return self.action
 
     def learn(self, td_error):
@@ -210,7 +207,8 @@ class PolicyGradientActor:
         self.mu.add_features(self.features, mu_grad)
         self.mu.update (scaled_alpha*td_error)
 
-        sigma_grad = (std_action**2 - 1 + trunc_grad_sigma)*(1 - sigma/self.max_sigma)
+        sigma_grad = (std_action**2 - 1 + trunc_grad_sigma)/sigma*(sigma-self.min_sigma)*(1-(sigma-self.min_sigma)/self.sigma_range)
+
         self.sigma.add_features(self.features, sigma_grad)
         self.sigma.update (scaled_alpha*td_error)
 
