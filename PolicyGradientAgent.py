@@ -182,11 +182,11 @@ class PolicyGradientActor:
 
         mu = self.mu.value (self.features)
         sigma = self.sigma.value (self.features)
-        sigma = self.max_sigma * (1 + math.tanh(sigma/2)) / 2
+        sigma = self.min_sigma + self.sigma_range * (1 + math.tanh(sigma/2)) / 2
 
-        max_mu = self.max_action + 3*sigma
-        min_mu = self.min_action - 3*sigma
-        mu = max (min_mu, min (mu, max_mu))
+        max_mu = self.max_action + 3.0*sigma
+        min_mu = self.min_action - 3.0*sigma
+        mu = min (max (min_mu, mu), max_mu)
 
         alpha = (self.min_action - mu) / sigma
         beta = (self.max_action - mu) / sigma
