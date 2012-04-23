@@ -90,7 +90,7 @@ class Framework:
             self.simulator.lander.breakage = 0.0
 
         #if reward != 0.0: print 'Reward =', reward
-        reward -= 0.05 * self.simulator.main_throttle()
+        reward -= 0.01 * self.simulator.main_throttle()
         return reward
 
     def train (self, time_limit=600.0, num_procs=None):
