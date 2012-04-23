@@ -96,7 +96,7 @@ class Framework:
             np.random.seed (seed)
             while True:
                 time_exceeded = self.run(dt=time_limit)
-                if time_exceeded: self.terminate_with_reward(reward=-10.0)
+                if time_exceeded: self.terminate_with_reward(reward=-1.0)
                 with self.lock:
                     i = int(self.counter.value)
                     if i < len(self.returns):
