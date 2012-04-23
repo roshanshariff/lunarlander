@@ -79,6 +79,8 @@ class Framework:
     
     def reward (self):
         reward = 0.0
+        if abs(self.simulator.lander.pos[0]) >= 100:
+            self.simulator.crashed = True
         if self.simulator.crashed or self.simulator.landed:
             reward -= abs(self.simulator.lander.pos[0]) / self.simulator.lander_width
             if self.simulator.landed:
@@ -86,8 +88,9 @@ class Framework:
         if not self.simulator.landed:
             reward -= math.log10 (1.0 + self.simulator.lander.breakage)
             self.simulator.lander.breakage = 0.0
+
         #if reward != 0.0: print 'Reward =', reward
-        reward -= 0.01 * self.simulator.main_throttle()
+        reward -= 0.05 * self.simulator.main_throttle()
         return reward
 
     def train (self, time_limit=600.0, num_procs=None):
