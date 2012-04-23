@@ -261,8 +261,8 @@ class UserAgent (pyglet.window.key.KeyStateHandler):
         super(UserAgent, self).__init__()
         self.simulator = simulator
         self.dt = 0.5 #simulator.dt
-        self.max_state = np.array([30.0,20.0,5.0,5.0,float('inf'),5])
-        self.min_state = np.array([0.0,0.0,-5.0,-5.0,-float('inf'),-5])
+        self.max_state = np.array([30.0,20.0,5.0,5.0,1000,5])
+        self.min_state = np.array([0.0,0.0,-5.0,-5.0,1000,-5])
 
     def initialize (self, state):
         pass
