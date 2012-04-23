@@ -76,7 +76,7 @@ class PolicyGradientAgent:
 
         # thrust = clamp (self.thrust_actor.act(features), 0.0, self.simulator.max_thrust)
         # rcs = clamp (self.rcs_actor.act(features), -self.simulator.max_rcs, self.simulator.max_rcs)
-        thrust = self.thrust_actor(features)
+        thrust = self.thrust_actor.act(features)
         rcs = self.rcs_actor.act(features)
         return (thrust, rcs)
 
@@ -233,7 +233,7 @@ class PolicyGradientActor:
     # def old_act (self, features):
     #     self.features = features
     #     self.action = np.random.normal(*self.action_dist())
-    #     return self.action
+2    #     return self.action
         
     # def old_learn (self, td_error):
 
