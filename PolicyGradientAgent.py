@@ -43,8 +43,6 @@ class PolicyGradientAgent:
                                               initial_mu=initial_rcs_mu, initial_sigma=initial_rcs_sigma,
                                               trunc_normal=trunc_normal)
 
-        self.initialize()
-
     def make_tile_coder (self, tile_weight_exponent):
         #                            xpos   ypos  xvel  yvel        rot     rotvel
         state_signed  = np.array ([ False, False, True, True,      True,      True ])
@@ -69,51 +67,39 @@ class PolicyGradientAgent:
 
         return TileCoder (tile_size, num_tiles, num_offsets, [1,2,6], tile_weight_exponent)
 
-    def features (self):
+    def compute_action (self, features):
 
-        (pos_x, pos_y) = self.simulator.lander.pos
-        (vel_x, vel_y) = self.simulator.lander.vel
-        rot = self.simulator.lander.rot
-        rot_vel = self.simulator.lander.rot_vel
-
-        if pos_x < 0: (xsign, pos_x, vel_x, rot, rot_vel) = (-1.0, -pos_x, -vel_x, -rot, -rot_vel)
-        else: xsign = 1.0
-
-        state = np.array([pos_x, pos_y, vel_x, vel_y, rot, rot_vel]).clip(self.min_clip_state, self.max_clip_state)
-        return (self.tile_coder.indices(state), xsign)
-
-    def take_action (self, features, xsign):
         # def clamp (value, low, high):
         #     value = low + math.fmod (abs(value-low), 2*(high-low))
         #     if value > high: value = 2*high - value
         #     return value
+
         # thrust = clamp (self.thrust_actor.act(features), 0.0, self.simulator.max_thrust)
         # rcs = clamp (self.rcs_actor.act(features), -self.simulator.max_rcs, self.simulator.max_rcs)
-        thrust = self.thrust_actor.act(features)
+        thrust = self.thrust_actor(features)
         rcs = self.rcs_actor.act(features)
-        self.simulator.set_action (thrust, xsign*rcs)
+        return (thrust, rcs)
 
-    def initialize (self):
+    def initialize (self, state):
 
-        (features, xsign) = self.features()
+        features = self.tile_coder.indices (state.clip (self.min_clip_state, self.max_clip_state))
 
         self.critic.initialize(features)
         self.thrust_actor.initialize()
         self.rcs_actor.initialize()
 
-        self.take_action(features, xsign)
+        return self.compute_action (features)
 
-    def update (self, reward=None, terminal=False):
+    def update (self, state, reward, terminal=False, learn=True):
 
-        (features, xsign) = self.features()
+        features = self.tile_coder.indices (state.clip (self.min_clip_state, self.max_clip_state))
 
-        if reward != None:
+        if learn:
             td_error = self.critic.evaluate (features, reward, terminal)
             self.thrust_actor.learn (td_error)
             self.rcs_actor.learn (td_error)
 
-        if not terminal:
-            self.take_action (features, xsign)
+        return self.compute_action (features)
 
     def get_state(self):
         return np.vstack ((self.critic.value.weights,
@@ -279,8 +265,21 @@ class LinearFunctionApprox:
     def initialize (self):
         self.trace.clear()
 
+    # def value (self, features):
+    #     return np.dot (self.weights.take(features), self.feature_weights)
+
     def value (self, features):
-        return np.dot (self.weights.take(features), self.feature_weights)
+        feature_weights = self.feature_weights
+        weights = self.weights
+        code = """
+            double value = 0.0;
+            for (int i = 0; i < features.size(); ++i) {
+                value += weights(features(i)) * feature_weights(i);
+            }
+            return_val = value; 
+        """
+        names = [ 'features', 'feature_weights', 'weights' ]
+        return weave.inline (code, names, type_converters=weave.converters.blitz)
 
     def add_features (self, features, scaling=1.0):
         self.trace.appendleft ((features, scaling))

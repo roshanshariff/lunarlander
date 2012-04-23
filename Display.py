@@ -264,10 +264,10 @@ class UserAgent (pyglet.window.key.KeyStateHandler):
         self.max_state = np.array([30.0,20.0,5.0,5.0,float('inf'),5])
         self.min_state = np.array([0.0,0.0,-5.0,-5.0,-float('inf'),-5])
 
-    def initialize (self):
+    def initialize (self, state):
         pass
 
-    def update (self, reward=None, terminal=False):
+    def update (self, state, reward, terminal=False, learn=False):
         thrust = self.simulator.max_thrust if self[key.W] else 0.0
         left = self.simulator.max_rcs if self[key.A] else 0.0
         right = self.simulator.max_rcs if self[key.D] else 0.0
