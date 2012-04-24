@@ -65,7 +65,7 @@ class PolicyGradientAgent:
         num_tiles[state_signed] *= 2
         num_tiles[state_bounded] += 1
 
-        return TileCoder (tile_size, num_tiles, num_offsets, [6], tile_weight_exponent)
+        return TileCoder (tile_size, num_tiles, num_offsets, [1,2,6], tile_weight_exponent)
 
     def compute_action (self, features):
 

@@ -18,7 +18,7 @@ def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs,num_episodes=20
         agent = PolicyGradientAgent (simulator, 
                                      Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
                                      tile_weight_exponent=tile_weight_exponent,
-                                     trunc_normal=True)
+                                     trunc_normal=False)
         agent.persist_state()
         framework = Framework(simulator, agent, num_episodes=num_episodes)
         framework.train(num_procs=num_procs)
@@ -40,7 +40,7 @@ def make_plot():
     legend (loc='lower left')
         
 if __name__ == "__main__":
-    params = [ (0.75, 0.1, 0.0, 1, 20000, 2, "nosubspaces_trunc_normal") ]
+    params = [ (0.75, 0.1, 0.5, 1, 20000, 2, "weighted_clamp_env") ]
     results = []
     for ps in params:
         run_experiment(*ps)
