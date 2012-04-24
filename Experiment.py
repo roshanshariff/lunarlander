@@ -40,7 +40,7 @@ def make_plot():
     legend (loc='lower left')
         
 if __name__ == "__main__":
-    params = [ (0.75, 0.1, 0.5, 1, 20000, 2, "weighted_trunc_normal") ]
+    params = [ (0.75, 0.1, 0.0, 1, 20000, 2, "unweighted_trunc_normal") ]
     results = []
     for ps in params:
         run_experiment(*ps)
