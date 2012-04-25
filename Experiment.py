@@ -10,15 +10,16 @@ from PolicyGradientAgent import PolicyGradientAgent
 
 simulator = LunarLanderSimulator()
 
-def run_experiment(Lambda, alpha, tile_weight_exponent, num_runs,num_episodes=20000, num_procs=None,name=""):
+def run_experiment(Lambda, alpha, twe, trunc_normal, subspaces, num_runs,num_episodes=20000, num_procs=None,name=""):
     returns = np.empty((num_runs, num_episodes), dtype=np.float64)
     results.append(returns)
     for i in xrange(num_runs):
-        print 'Lambda = %g, Alpha = %g, p = %g Run %d:'%(Lambda, alpha, tile_weight_exponent, i)
+        print name
         agent = PolicyGradientAgent (simulator, 
                                      Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
-                                     tile_weight_exponent=tile_weight_exponent,
-                                     trunc_normal=False)
+                                     tile_weight_exponent=twe,
+                                     trunc_normal=trunc_normal,
+                                     subspaces=subspaces)
         agent.persist_state()
         framework = Framework(simulator, agent, num_episodes=num_episodes)
         framework.train(num_procs=num_procs)
@@ -39,9 +40,12 @@ def make_plot():
         plot(returns.mean(axis=0).cumsum(), label=r'$\lambda=%g,\alpha=%g,p=%g$'%params[i][:3])
     legend (loc='lower left')
         
+params = [
+    {'Lambda':0.75, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6], 'num_runs':1,
+     'num_episodes':20000, 'num_procs':2, 'name':"weighted_trunc_normal_new"}
+    ]
 if __name__ == "__main__":
-    params = [ (0.75, 0.1, 0.5, 1, 20000, 2, "weighted_clamp_env") ]
     results = []
     for ps in params:
-        run_experiment(*ps)
+        run_experiment(**ps)
     

@@ -140,7 +140,8 @@ class Framework:
                     else:
                         break
                     self.counter.value += 1
-                print i, 'Return =', self.returns[i]
+                if i%100 == 0:
+                    print i, 'Return =', self.returns[i]
 
         procs = [ mp.Process (target=proc, args=(np.random.randint(sys.maxint),)) for i in xrange(num_procs) ]
         try:

@@ -11,19 +11,13 @@ from TileCoder import TileCoder, HashingTileCoder
 class PolicyGradientAgent:
 
     def __init__(self, simulator, dt=0.5, Lambda=0.75, alpha_v=0.1, alpha_u=0.1, num_features=2**20, tile_weight_exponent=0.5, 
-                 trunc_normal=True):
+                 trunc_normal=True, subspaces=[1,2,6]):
 
         self.simulator = simulator
         self.dt = max(dt, self.simulator.dt)
 
-        self.tile_coder = HashingTileCoder (self.make_tile_coder(tile_weight_exponent), num_features)
+        self.tile_coder = HashingTileCoder (self.make_tile_coder(tile_weight_exponent, subspaces), num_features)
 
-        # if trunc_normal:
-        #     initial_thrust_sigma = simulator.max_thrust / 8
-        #     initial_thrust_mu = 1.0
-        #     initial_rcs_sigma = simulator.max_rcs / 4
-        #     initial_rcs_mu = 0.0
-        # else:
         initial_thrust_sigma = simulator.max_thrust / 10
         initial_thrust_mu = 0.5
         initial_rcs_sigma = simulator.max_rcs / 6
@@ -43,7 +37,7 @@ class PolicyGradientAgent:
                                               initial_mu=initial_rcs_mu, initial_sigma=initial_rcs_sigma,
                                               trunc_normal=trunc_normal)
 
-    def make_tile_coder (self, tile_weight_exponent):
+    def make_tile_coder (self, tile_weight_exponent, subspaces):
         #                            xpos   ypos  xvel  yvel        rot     rotvel
         state_signed  = np.array ([ False, False, True, True,      True,      True ])
         state_bounded = np.array ([  True,  True, True, True,     False,      True ])
@@ -65,7 +59,7 @@ class PolicyGradientAgent:
         num_tiles[state_signed] *= 2
         num_tiles[state_bounded] += 1
 
-        return TileCoder (tile_size, num_tiles, num_offsets, [1,2,6], tile_weight_exponent)
+        return TileCoder (tile_size, num_tiles, num_offsets, subspaces, tile_weight_exponent)
 
     def compute_action (self, features):
 
@@ -185,8 +179,8 @@ class PolicyGradientActor:
         sigma = self.sigma.value (self.features)
         sigma = self.min_sigma + self.sigma_range * (1 + math.tanh(sigma/2)) / 2
 
-        max_mu = self.max_action + 3.0*sigma
-        min_mu = self.min_action - 3.0*sigma
+        max_mu = self.max_action + 35.0*sigma
+        min_mu = self.min_action - 35.0*sigma
         mu = min (max (min_mu, mu), max_mu)
 
         if not self.trunc_normal: return (float('-inf'), float('inf'), mu, sigma)
