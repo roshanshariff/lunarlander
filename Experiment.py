@@ -42,7 +42,7 @@ def make_plot():
 
 params = [
     {'Lambda':0.75, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6], 'num_runs':1,
-     'num_episodes':20000, 'num_procs':2, 'name':"lambda_0_weighted_trunc_normal"},
+     'num_episodes':20000, 'num_procs':2, 'name':"weighted_trunc_normal"},
     {'Lambda':0.5, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6], 'num_runs':1,
      'num_episodes':20000, 'num_procs':2, 'name':"lambda_0.5_weighted_trunc_normal"},
     {'Lambda':0.9, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6], 'num_runs':1,
