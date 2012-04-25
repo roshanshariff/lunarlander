@@ -179,8 +179,8 @@ class PolicyGradientActor:
         sigma = self.sigma.value (self.features)
         sigma = self.min_sigma + self.sigma_range * (1 + math.tanh(sigma/2)) / 2
 
-        max_mu = self.max_action + 35.0*sigma
-        min_mu = self.min_action - 35.0*sigma
+        max_mu = self.max_action + 3.0*sigma
+        min_mu = self.min_action - 3.0*sigma
         mu = min (max (min_mu, mu), max_mu)
 
         if not self.trunc_normal: return (float('-inf'), float('inf'), mu, sigma)
