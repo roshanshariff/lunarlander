@@ -3,14 +3,16 @@
 #include <utility>
 #include <algorithm>
 #include <cstdlib>
+#include <cmath>
 
 #include <Eigen/Geometry>
+
 
 bool rigid_body::process_collisions (const double restitution,
                                      const std::vector<Vector2d>& colliders_dpos_dtheta,
                                      const Vector2d& new_pos,
                                      const double new_rot,
-                                     std::vector<bool>& collided) {
+                                     const bool processing_contact) {
 
   if (new_pos.y() > bounding_radius) return false;
 
@@ -57,11 +59,72 @@ bool rigid_body::process_collisions (const double restitution,
     }
 
     apply_impulse (colliders_rel_pos[i], impulse);
-    collided[i] |= true;
+    (processing_contact ? colliders[i].contacted : colliders[i].collided) = true;
     collisions = true;
 
+    colliders[i].impulses += rot_matrix.inverse() * impulse;
   }
 
   return collisions;
+
+}
+
+
+void rigid_body::update (const double dt, const Vector2d& force, const double torque) {
+
+  std::vector<Vector2d> colliders_dpos_dtheta (colliders.size());
+  {
+    Matrix2d rot_matrix;
+    double sin_rot = std::sin (rot);
+    double cos_rot = std::cos (rot);
+    rot_matrix <<
+      -sin_rot, -cos_rot,
+      cos_rot,  -sin_rot;
+
+    for (int i = 0; i < colliders.size(); ++i) {
+      colliders_dpos_dtheta[i] = rot_matrix * colliders[i].pos;
+    }
+  }
+
+  const Vector2d delta_vel = force * (dt / mass);
+  const double delta_rot_vel = torque * (dt / mom_inertia);
+
+  // Collision
+
+  for (int i = 0; i < colliders.size(); ++i) colliders[i].reset_collision();
+
+  for (int i = 0; i < 5; ++i) {
+
+    const Vector2d new_pos = pos + dt*(vel + delta_vel);
+    const double new_rot = rot + dt*(rot + delta_rot_vel);
+
+    if (!process_collisions (restitution, colliders_dpos_dtheta, new_pos, new_rot, false)) break;
+  }
+
+  // Velocity update
+
+  vel += delta_vel;
+  rot_vel += delta_rot_vel;
+
+  // Contact
+
+  for (int i = -9; i <= 0; ++i) {
+
+    const Vector2d new_pos = pos + dt*(vel + delta_vel);
+    const double new_rot = rot + dt*(rot + delta_rot_vel);
+
+    if (!process_collisions (i/10.0, colliders_dpos_dtheta, new_pos, new_rot, true)) break;
+  }
+
+  // Position update
+
+  pos += dt * vel;
+  rot += dt * rot_vel;
+
+  // Breakage
+
+  for (int i = 0; i < colliders.size(); ++i) {
+    set_breakage ((colliders[i].strength * colliders[i].impulses).norm());
+  }
 
 }

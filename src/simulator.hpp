@@ -14,10 +14,23 @@ public:
 
   struct collider {
 
-    Vector3d pos;
+    Vector2d pos;
     Matrix2d strength;
 
-    collider (const Vector2d& pos, const Matrix2d& strength) : pos(pos), strength(strength) { }
+    Vector2d impulses;
+    bool collided;
+    bool contacted;
+
+    collider (const Vector2d& pos, const Matrix2d& strength) : pos(pos), strength(strength) {
+      reset_collision();
+    }
+
+    void reset_collision () {
+      impulses.setZero();
+      collided = false;
+      contacted = false;
+    }
+
   };
 
 private:
@@ -32,18 +45,30 @@ private:
   std::vector<collider> colliders;
   double bounding_radius;
 
+  double breakage;
+
+  bool process_collisions (const double restitution,
+                           const std::vector<Vector2d>& colliders_dpos_dtheta,
+                           const Vector2d& new_pos,
+                           const double new_rot,
+                           const bool processing_contact);
+
+  void set_breakage (double new_breakage) {
+    breakage = std::max (breakage, new_breakage);
+  }
+
 public:
 
   void apply_impulse (Vector2d position, Vector2d impulse) {
     vel += impulse / mass;
-    rot_vel += position.cross (impulse) / mom_inertia;
+    rot_vel += (position.x()*impulse.y() - position.y()*impulse.x()) / mom_inertia;
   }
 
-  bool rigid_body::process_collisions (const double restitution,
-                                       const std::vector<Vector2d>& colliders_dpos_dtheta,
-                                       const Vector2d& new_pos,
-                                       const double new_rot,
-                                       std::vector<bool>& collided);
+  void update (const double dt, const Vector2d& force, const double torque);
+
+  void clear_breakage () {
+    breakage = 0.0;
+  }
 
 };
 
