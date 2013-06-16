@@ -19,12 +19,12 @@ bool rigid_body::process_collisions (const double restitution,
   Eigen::Rotation2Dd rot_matrix (new_rot);
 
   std::vector<Vector2d> colliders_rel_pos (colliders.size());
-  for (int i = 0; i < colliders.size(); ++i) {
+  for (unsigned int i = 0; i < colliders.size(); ++i) {
     colliders_rel_pos[i] = rot_matrix * colliders[i].pos;
   }
 
   std::vector<std::pair<double, size_t> > colliders_sort_ix (colliders.size());
-  for (int i = 0; i < colliders.size(); ++i) {
+  for (unsigned int i = 0; i < colliders.size(); ++i) {
     colliders_sort_ix[i].first = colliders_rel_pos[i].y();
     colliders_sort_ix[i].second = i;
   }
@@ -33,7 +33,7 @@ bool rigid_body::process_collisions (const double restitution,
 
   bool collisions = false;
 
-  for (int sorted_index = 0; sorted_index < colliders.size(); ++sorted_index) {
+  for (unsigned int sorted_index = 0; sorted_index < colliders.size(); ++sorted_index) {
 
     const int i = colliders_sort_ix[sorted_index].second;
 
@@ -70,9 +70,6 @@ bool rigid_body::process_collisions (const double restitution,
 }
 
 
-
-
-
 void rigid_body::update (const double dt, const Vector2d& force, const double torque) {
 
   std::vector<Vector2d> colliders_dpos_dtheta (colliders.size());
@@ -84,7 +81,7 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
       -sin_rot, -cos_rot,
       cos_rot,  -sin_rot;
 
-    for (int i = 0; i < colliders.size(); ++i) {
+    for (unsigned int i = 0; i < colliders.size(); ++i) {
       colliders_dpos_dtheta[i] = rot_matrix * colliders[i].pos;
     }
   }
@@ -94,9 +91,9 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
 
   // Collision
 
-  for (int i = 0; i < colliders.size(); ++i) colliders[i].reset_collision();
+  for (unsigned int i = 0; i < colliders.size(); ++i) colliders[i].reset_collision();
 
-  for (int i = 0; i < 5; ++i) {
+  for (unsigned int i = 0; i < 5; ++i) {
 
     const Vector2d new_pos = pos + dt*(vel + delta_vel);
     const double new_rot = rot + dt*(rot + delta_rot_vel);
@@ -126,7 +123,7 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
 
   // Breakage
 
-  for (int i = 0; i < colliders.size(); ++i) {
+  for (unsigned int i = 0; i < colliders.size(); ++i) {
     accumulate_breakage ((colliders[i].strength * colliders[i].impulses).norm());
   }
 
@@ -136,7 +133,7 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
 double rigid_body::get_min_y() {
   Eigen::Rotation2Dd rot_mat(rot);
   double min_y = 0;
-  for (int i = 0; i < colliders.size(); ++i) {
+  for (unsigned int i = 0; i < colliders.size(); ++i) {
     min_y = std::max(min_y, -(rot_mat * colliders[i].pos).y());
   }
   return min_y;
@@ -174,7 +171,12 @@ std::vector<rigid_body::collider> lunar_lander_simulator::MAKE_COLLIDERS() {
 
 lunar_lander_simulator::lunar_lander_simulator (double dt) :
   dt(dt),
-  lander(MASS, MOM_INERTIA, MU_S, MU_K, RESTITUTION, MAKE_COLLIDERS())
+  lander(11036.4, // MASS in kg
+         28258.7, // MOM_INERTIA in kg m^2
+         1.0,     // MU_S
+         0.9,     // MU_K
+         0.2,     // RESTITUTION
+         MAKE_COLLIDERS())
 {
   initialize();
 }
@@ -198,6 +200,9 @@ void lunar_lander_simulator::initialize(double pos_x, double pos_y, double vel_x
 
 
 void lunar_lander_simulator::update() {
+
+  const double GRAVITY = 1.622; // m/s^2
+
   Vector2d accel (-thrust * std::sin(lander.get_rot()), thrust * std::cos(lander.get_rot()) - GRAVITY);
   lander.update(dt, accel * lander.get_mass(), rcs * lander.get_mom_inertia());
   crashed |= lander.get_breakage() > 1.0;
@@ -206,6 +211,10 @@ void lunar_lander_simulator::update() {
 }
 
 void lunar_lander_simulator::set_action(double thrust, double rcs) {
+
+  const double MAX_RCS = 0.16056757359680382; // rad/s^2
+  const double MAX_THRUST = 4.081113406545613; // m/s^2
+
   thrust = std::max (0.0, std::min(MAX_THRUST, thrust));
   rcs = std::max (-MAX_RCS, std::min(MAX_RCS, rcs));
 }

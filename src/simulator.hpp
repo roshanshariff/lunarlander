@@ -35,14 +35,13 @@ public:
 
 private:
 
+  double mass, mom_inertia;
+  double mu_s, mu_k, restitution;
+  std::vector<collider> colliders;
+
   Eigen::Vector2d pos, vel;
   double rot, rot_vel;
 
-  double mass, mom_inertia;
-
-  double restitution, mu_s, mu_k;
-
-  std::vector<collider> colliders;
   double bounding_radius;
 
   double breakage;
@@ -75,7 +74,7 @@ public:
   }
 
   void reset_collisions () {
-    for (int i = 0; i < colliders.size(); i++) colliders[i].reset_collision();
+    for (unsigned int i = 0; i < colliders.size(); i++) colliders[i].reset_collision();
   }
 
   double get_min_y();
@@ -112,8 +111,8 @@ public:
 
 class lunar_lander_simulator {
 
-  rigid_body lander;
   double dt;
+  rigid_body lander;
 
   bool crashed, landed;
   double thrust, rcs;
@@ -121,20 +120,9 @@ class lunar_lander_simulator {
   // http://www.ibiblio.org/apollo/NARA-SW/R-567-sec6.pdf
   // Assuming descent stage 50% fuel, ascent stage 100% fuel
 
-  static const double GRAVITY = 1.622; // m/s^2
-  static const double LANDER_WIDTH = 9.07; // m
-
-  static const double MASS = 11036.4; // kg
-  static const double MOM_INERTIA = 28258.7; // kg m^2
-  static const double RESTITUTION = 0.2;
-  static const double MU_S = 1.0;
-  static const double MU_K = 0.9;
-
-  static const double MAX_RCS = 0.16056757359680382; // rad/s^2
-  static const double MAX_THRUST = 4.081113406545613; // m/s^2
-
   static inline Vector2d IMAGE_TO_BODY_COORDS (double x, double y) {
-    return Vector2d(x - 0.5, y - 0.36335788) * 9.07;
+    static const double LANDER_WIDTH = 9.07; // m
+    return Vector2d(x - 0.5, y - 0.36335788) * LANDER_WIDTH;
   }
 
   static rigid_body::collider MAKE_LEG_COLLIDER (double x, double y, double strut_dir);

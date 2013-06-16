@@ -9,7 +9,8 @@
 namespace {
 
 
-  void select_combination (std::vector<std::vector<int> >& result, std::vector<int>& partial, int from, int to, int index) {
+  void select_combination (std::vector<std::vector<int> >& result, std::vector<int>& partial,
+                           int from, int to, unsigned int index) {
 
     if (index >= partial.size()) {
       result.push_back (partial);
@@ -23,7 +24,8 @@ namespace {
   }
 
 
-  void subspace_offsets (std::vector<VectorXi>& result, VectorXi& partial, const VectorXi& num_offsets, int index) {
+  void subspace_offsets (std::vector<VectorXi>& result, VectorXi& partial, const VectorXi& num_offsets,
+                         unsigned int index) {
 
     if (index >= partial.size()) {
       result.push_back (partial);
@@ -47,14 +49,14 @@ tile_coder::tile_coder (const VectorXd& cell_size, const VectorXi& num_cells, co
 
   std::vector<std::vector<int> > subspace_selections;
 
-  for (int i = 0; i < subspace_dims.size(); ++i) {
+  for (unsigned int i = 0; i < subspace_dims.size(); ++i) {
     std::vector<int> partial (subspace_dims[i]);
     select_combination (subspace_selections, partial, 0, space_dim, 0);
   }
 
   std::vector<double> vec_feature_weights;
 
-  for (int i = 0; i < subspace_selections.size(); ++i) {
+  for (unsigned int i = 0; i < subspace_selections.size(); ++i) {
 
     const std::vector<int>& subspace = subspace_selections[i];
 
@@ -62,7 +64,7 @@ tile_coder::tile_coder (const VectorXd& cell_size, const VectorXi& num_cells, co
     VectorXi subspace_num_offsets = VectorXi::Ones (space_dim);
 
     {
-      for (int j = 0; j < subspace.size(); ++j) {
+      for (unsigned int j = 0; j < subspace.size(); ++j) {
 
         const int coord_ix = subspace[j];
 
@@ -84,7 +86,7 @@ tile_coder::tile_coder (const VectorXd& cell_size, const VectorXi& num_cells, co
       subspace_offsets (offset_list, partial, subspace_num_offsets, 0);
     }
 
-    for (int i = 0; i < offset_list.size(); ++i) {
+    for (unsigned int i = 0; i < offset_list.size(); ++i) {
       VectorXd offset = cell_size.array() * offset_list[i].cast<double>().array() / subspace_num_offsets.cast<double>().array();
       tilings.push_back (tiling (cell_size, subspace_num_cells, offset));
     }
@@ -101,7 +103,7 @@ VectorXi tile_coder::indices (const VectorXd& coord) const {
   VectorXi result (tilings.size());
 
   int start_index = 0;
-  for (int i = 0; i < tilings.size(); ++i) {
+  for (unsigned int i = 0; i < tilings.size(); ++i) {
     result(i) = start_index + tilings[i].index (coord);
     start_index += tilings[i].num_tiles;
   }
@@ -121,27 +123,28 @@ VectorXi hashing_tile_coder::indices (const VectorXd& coord) const {
   return result;
 }
 
-int main () {
 
-  std::vector<int> subspace_dims;
-  subspace_dims.push_back(1);
-  subspace_dims.push_back(2);
+// int main () {
 
-
-  hashing_tile_coder tiler (tile_coder (Eigen::Vector2d(0.5, 0.5), Eigen::Vector2i(2,2), Eigen::Vector2i(2,2), subspace_dims, 1.0), 4);
+//   std::vector<int> subspace_dims;
+//   subspace_dims.push_back(1);
+//   subspace_dims.push_back(2);
 
 
-  std::cout << "Num features:        " << tiler.get_num_features() << std::endl;
-  std::cout << "Num active features: " << tiler.get_active_features() << std::endl;
-  std::cout << "Weights:             " << tiler.get_feature_weights().transpose() << std::endl;
+//   hashing_tile_coder tiler (tile_coder (Eigen::Vector2d(0.5, 0.5), Eigen::Vector2i(2,2), Eigen::Vector2i(2,2), subspace_dims, 1.0), 4);
 
-  double x, y;
-  while (std::cin >> x >> y) {
-    VectorXi result = tiler.indices (Eigen::Vector2d (x, y));
-    for (int i = 0; i < result.size(); ++i) {
-      std::cout << result(i) << ' ';
-    }
-    std::cout << std::endl;
-  }
 
-}
+//   std::cout << "Num features:        " << tiler.get_num_features() << std::endl;
+//   std::cout << "Num active features: " << tiler.get_active_features() << std::endl;
+//   std::cout << "Weights:             " << tiler.get_feature_weights().transpose() << std::endl;
+
+//   double x, y;
+//   while (std::cin >> x >> y) {
+//     VectorXi result = tiler.indices (Eigen::Vector2d (x, y));
+//     for (int i = 0; i < result.size(); ++i) {
+//       std::cout << result(i) << ' ';
+//     }
+//     std::cout << std::endl;
+//   }
+
+// }
