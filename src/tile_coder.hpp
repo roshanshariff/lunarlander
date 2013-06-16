@@ -8,7 +8,16 @@
 using Eigen::VectorXd;
 using Eigen::VectorXi;
 
-class tile_coder {
+class tile_coder_base {
+public:
+  virtual VectorXi indices (const VectorXd& coord) const = 0;
+  virtual const VectorXd& get_feature_weights() const = 0;
+  virtual int get_active_features() const = 0;
+  virtual int get_num_features() const = 0;
+};
+
+
+class tile_coder : public tile_coder_base {
 
   struct tiling {
 
@@ -54,7 +63,7 @@ public:
 };
 
 
-struct hashing_tile_coder {
+struct hashing_tile_coder : public tile_coder_base {
 
   tile_coder tc;
   int num_features;
