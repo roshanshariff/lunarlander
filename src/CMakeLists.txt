@@ -21,6 +21,8 @@ find_package (Boost 1.46.0 COMPONENTS random REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 target_link_libraries (main ${Boost_LIBRARIES})
 
+set (CMAKE_BUILD_TYPE Debug)
+
 if (CMAKE_COMPILER_IS_GNUCXX)
    add_definitions ("-Werror -Wall -Wextra -march=native -mno-avx")
 endif()

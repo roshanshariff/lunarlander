@@ -60,7 +60,7 @@ public:
 class trunc_normal_distribution {
 
   double _mu, _sigma;
-  double alpha, beta;
+  double _alpha, _beta;
 
   double cdf_alpha, cdf_beta;
   double delta, log_delta;
@@ -68,21 +68,28 @@ class trunc_normal_distribution {
 public:
 
   trunc_normal_distribution(double mu, double sigma, double a, double b)
-    : _mu(mu), _sigma(sigma), alpha((a-mu)/sigma), beta((b-mu)/sigma),
-      cdf_alpha(norm_cdf(alpha)), cdf_beta(norm_cdf(beta)),
+    : _mu(mu), _sigma(sigma), _alpha((a-mu)/sigma), _beta((b-mu)/sigma),
+      cdf_alpha(norm_cdf(_alpha)), cdf_beta(norm_cdf(_beta)),
       delta(cdf_beta - cdf_alpha)
   {}
 
   double mu() const { return _mu; }
-
   double sigma() const { return _sigma; }
+  double alpha() const { return _alpha; }
+  double beta() const { return _beta; }
+  double norm_constant() const { return delta; }
 
   double pdf(double x) const {
-    return norm_pdf((x-mu())/sigma()) / delta;
+    const double std_x = (x - mu()) / sigma();
+    if (std_x < _alpha || std_x > _beta) return 0;
+    return norm_pdf(std_x) / delta;
   }
 
   double cdf(double x) const {
-    return (norm_cdf((x-mu())/sigma()) - cdf_alpha) / delta;
+    const double std_x = (x - mu()) / sigma();
+    if (std_x < _alpha) return 0;
+    if (std_x > _beta) return 1;
+    return (norm_cdf(std_x) - cdf_alpha) / delta;
   }
 
   template <class Engine> double operator()(Engine& rng) const {

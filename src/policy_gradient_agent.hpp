@@ -2,11 +2,13 @@
 #define _POLICY_GRADIENT_AGENT_HPP
 
 #include <cmath>
+#include <boost/random/mersenne_twister.hpp>
 #include <Eigen/Core>
 #include <deque>
 #include <utility>
 
 #include "tile_coder.hpp"
+#include "utility.hpp"
 
 using Eigen::VectorXd;
 
@@ -60,10 +62,41 @@ public:
 
 class policy_gradient_actor {
 
+  double alpha;
+  double min_action, max_action;
+  double min_sigma, sigma_range;
+  bool use_trunc_normal;
+  linear_function_approx mu, sigma;
+  VectorXi features;
+  double action;
+
 public:
 
-  void initialize();
+  policy_gradient_actor(const tile_coder_base& tc, double lambda, double alpha,
+                        double min_action, double max_action,
+                        double min_sigma, double max_sigma,
+                        double initial_mu, double initial_sigma,
+                        double gamma,
+                        bool use_trunc_normal)
+    : alpha(alpha), min_action(min_action), max_action(max_action), min_sigma(min_sigma), sigma_range(max_sigma - min_sigma),
+      use_trunc_normal(use_trunc_normal), mu(tc, gamma*lambda, initial_mu),
+      sigma(tc, gamma*lambda, std::log((initial_sigma-min_sigma)/(max_sigma-initial_sigma)))
+  {}
 
+  void initialize() {
+    mu.initialize();
+    sigma.initialize();
+  }
+
+  trunc_normal_distribution action_dist() const;
+
+  double act(boost::random::mt19937& rng, const VectorXi& new_features) {
+    features = new_features;
+    action = action_dist()(rng);
+    return action;
+  }
+
+  void learn(double td_error);
 
 };
 
