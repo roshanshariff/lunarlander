@@ -111,11 +111,20 @@ public:
 
 class lunar_lander_simulator {
 
+public:
+
+  struct action {
+    double thrust, rcs;
+    action(double thrust = 0, double rcs = 0) : thrust(thrust), rcs(rcs) {}
+  };
+
+private:
+
   double dt;
   rigid_body lander;
 
   bool crashed, landed;
-  double thrust, rcs;
+  action current_action;
 
   // http://www.ibiblio.org/apollo/NARA-SW/R-567-sec6.pdf
   // Assuming descent stage 50% fuel, ascent stage 100% fuel
@@ -131,13 +140,17 @@ class lunar_lander_simulator {
 
 public:
 
+  static double MAX_THRUST () { return 4.081113406545613; } // m/s^2
+  static double MAX_RCS () { return 0.16056757359680382; } // rad/s^2
+
+
   lunar_lander_simulator (double dt);
 
   void initialize(double pos_x=0, double pos_y=0, double vel_x=0, double vel_y=0, double rot=0, double rot_vel=0);
 
   void update();
 
-  void set_action(double thrust, double rcs);
+  void set_action(const action& new_action);
 };
 
 #endif

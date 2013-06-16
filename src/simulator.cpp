@@ -192,8 +192,7 @@ void lunar_lander_simulator::initialize(double pos_x, double pos_y, double vel_x
   lander.reset_breakage();
 
   crashed = false;
-  thrust = 0;
-  rcs = 0;
+  current_action = action();
 
   update();
 }
@@ -203,18 +202,15 @@ void lunar_lander_simulator::update() {
 
   const double GRAVITY = 1.622; // m/s^2
 
-  Vector2d accel (-thrust * std::sin(lander.get_rot()), thrust * std::cos(lander.get_rot()) - GRAVITY);
-  lander.update(dt, accel * lander.get_mass(), rcs * lander.get_mom_inertia());
+  Vector2d accel = Eigen::Rotation2Dd (lander.get_rot()) * Vector2d (0, current_action.thrust);
+  accel.y() -= GRAVITY;
+  lander.update(dt, accel*lander.get_mass(), current_action.rcs*lander.get_mom_inertia());
   crashed |= lander.get_breakage() > 1.0;
   landed = lander.get_colliders()[0].contacted && lander.get_colliders()[1].contacted &&
     lander.get_vel().norm() < 1;
 }
 
-void lunar_lander_simulator::set_action(double thrust, double rcs) {
-
-  const double MAX_RCS = 0.16056757359680382; // rad/s^2
-  const double MAX_THRUST = 4.081113406545613; // m/s^2
-
-  thrust = std::max (0.0, std::min(MAX_THRUST, thrust));
-  rcs = std::max (-MAX_RCS, std::min(MAX_RCS, rcs));
+void lunar_lander_simulator::set_action(const action& new_action) {
+  current_action.thrust = std::max (0.0, std::min(MAX_THRUST(), new_action.thrust));
+  current_action.rcs = std::max (-MAX_RCS(), std::min(MAX_RCS(), new_action.rcs));
 }

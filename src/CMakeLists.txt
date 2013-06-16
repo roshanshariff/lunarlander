@@ -4,12 +4,14 @@ project (rldm CXX)
 add_library (lib_simulator OBJECT simulator.cpp)
 add_library (lib_tile_coder OBJECT tile_coder.cpp)
 add_library (lib_policy_gradient_agent OBJECT policy_gradient_agent.cpp)
+add_library (lib_lunar_lander_agent OBJECT lunar_lander_agent.cpp)
 add_library (lib_utility OBJECT utility.cpp)
 
 add_executable (main main.cpp
                $<TARGET_OBJECTS:lib_simulator>
                $<TARGET_OBJECTS:lib_tile_coder>
                $<TARGET_OBJECTS:lib_policy_gradient_agent>
+               $<TARGET_OBJECTS:lib_lunar_lander_agent>
                $<TARGET_OBJECTS:lib_utility>)
 
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/Modules/")
