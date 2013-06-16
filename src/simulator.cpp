@@ -70,6 +70,9 @@ bool rigid_body::process_collisions (const double restitution,
 }
 
 
+
+
+
 void rigid_body::update (const double dt, const Vector2d& force, const double torque) {
 
   std::vector<Vector2d> colliders_dpos_dtheta (colliders.size());
@@ -124,7 +127,85 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
   // Breakage
 
   for (int i = 0; i < colliders.size(); ++i) {
-    set_breakage ((colliders[i].strength * colliders[i].impulses).norm());
+    accumulate_breakage ((colliders[i].strength * colliders[i].impulses).norm());
   }
 
+}
+
+
+double rigid_body::get_min_y() {
+  Eigen::Rotation2Dd rot_mat(rot);
+  double min_y = 0;
+  for (int i = 0; i < colliders.size(); ++i) {
+    min_y = std::max(min_y, -(rot_mat * colliders[i].pos).y());
+  }
+  return min_y;
+}
+
+rigid_body::collider lunar_lander_simulator::MAKE_LEG_COLLIDER (double x, double y, double strut_dir) {
+  const double strength = 3.0e4;
+  const double shear = strength * 0.4;
+  double cos_dir = std::cos(strut_dir);
+  double sin_dir = std::sin(strut_dir);
+  Matrix2d strength_mat;
+  strength_mat <<
+    cos_dir/strength, sin_dir/strength,
+    -sin_dir/shear,   cos_dir/shear;
+  return rigid_body::collider(IMAGE_TO_BODY_COORDS(x,y), strength_mat);
+}
+
+rigid_body::collider lunar_lander_simulator::MAKE_BODY_COLLIDER (double x, double y) {
+  return rigid_body::collider(IMAGE_TO_BODY_COORDS(x,y), Matrix2d::Identity());
+}
+
+std::vector<rigid_body::collider> lunar_lander_simulator::MAKE_COLLIDERS() {
+  std::vector<rigid_body::collider> colliders;
+  const double pi = std::atan(1)*4;
+  colliders.push_back(MAKE_LEG_COLLIDER  (0.0541, 0.0456, pi/6));
+  colliders.push_back(MAKE_LEG_COLLIDER  (0.9459, 0.0456, pi*5/6));
+  colliders.push_back(MAKE_LEG_COLLIDER  (0.0000, 0.0627, pi/6));
+  colliders.push_back(MAKE_LEG_COLLIDER  (1.0000, 0.0626, pi*5/6));
+  colliders.push_back(MAKE_BODY_COLLIDER (0.2251, 0.6980));
+  colliders.push_back(MAKE_BODY_COLLIDER (0.4729, 0.8348));
+  colliders.push_back(MAKE_BODY_COLLIDER (0.6211, 0.6809));
+  colliders.push_back(MAKE_BODY_COLLIDER (0.7493, 0.4929));
+  return colliders;
+}
+
+lunar_lander_simulator::lunar_lander_simulator (double dt) :
+  dt(dt),
+  lander(MASS, MOM_INERTIA, MU_S, MU_K, RESTITUTION, MAKE_COLLIDERS())
+{
+  initialize();
+}
+
+
+void lunar_lander_simulator::initialize(double pos_x, double pos_y, double vel_x, double vel_y, double rot, double rot_vel) {
+  lander.set_pos(Vector2d (pos_x, pos_y));
+  lander.set_rot(rot);
+  lander.set_vel(Vector2d (vel_x, vel_y));
+  lander.set_rot_vel(rot_vel);
+
+  lander.reset_collisions();
+  lander.reset_breakage();
+
+  crashed = false;
+  thrust = 0;
+  rcs = 0;
+
+  update();
+}
+
+
+void lunar_lander_simulator::update() {
+  Vector2d accel (-thrust * std::sin(lander.get_rot()), thrust * std::cos(lander.get_rot()) - GRAVITY);
+  lander.update(dt, accel * lander.get_mass(), rcs * lander.get_mom_inertia());
+  crashed |= lander.get_breakage() > 1.0;
+  landed = lander.get_colliders()[0].contacted && lander.get_colliders()[1].contacted &&
+    lander.get_vel().norm() < 1;
+}
+
+void lunar_lander_simulator::set_action(double thrust, double rcs) {
+  thrust = std::max (0.0, std::min(MAX_THRUST, thrust));
+  rcs = std::max (-MAX_RCS, std::min(MAX_RCS, rcs));
 }
