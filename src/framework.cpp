@@ -9,10 +9,15 @@
 double framework::reward() {
 
   double reward = 0;
-  if (std::abs(simulator.get_lander().get_pos().x()) > 100) simulator.set_crashed();
+
+  double x_pos = std::abs (simulator.get_lander().get_pos().x());
+  if (x_pos > 100) {
+    simulator.set_crashed();
+    x_pos = 100;
+  }
 
   if (simulator.get_crashed() || simulator.get_landed()) {
-    reward -= std::abs(simulator.get_lander().get_pos().x()) / lunar_lander_simulator::LANDER_WIDTH();
+    reward -= x_pos / lunar_lander_simulator::LANDER_WIDTH();
     if (simulator.get_landed()) reward += 1;
   }
   else if (time_elapsed > 600) {
