@@ -87,8 +87,10 @@ std::vector<double> framework::run_episode(boost::random::mt19937& init_rng,
 
   initialize_simulator(init_rng);
   take_action(agent.initialize(agent_rng, simulator_state()));
+  send_visualiser_data();
 
   time_elapsed = 0;
+  _return = 0;
   std::vector<double> rewards;
 
   while (true) {
@@ -96,16 +98,39 @@ std::vector<double> framework::run_episode(boost::random::mt19937& init_rng,
       if (simulator.get_landed() || simulator.get_crashed()) break;
       simulator.update(dt);
       time_elapsed += dt;
+      send_visualiser_data();
     }
 
-    double Reward = reward();
-    rewards.push_back(Reward);
+    double _reward = reward();
+    _return += _reward;
+    rewards.push_back(_reward);
 
     bool terminal = simulator.get_crashed() || simulator.get_landed();
-    take_action(agent.update(agent_rng, simulator_state(), Reward, terminal));
+    take_action(agent.update(agent_rng, simulator_state(), _reward, terminal));
 
     if (terminal) break;
   }
 
+  if (visualiser) std::fflush (visualiser);
+
   return rewards;
+}
+
+
+void framework::send_visualiser_data () const {
+
+  if (!visualiser) return;
+
+  const Vector2d& pos = simulator.get_lander().get_pos();
+  const Vector2d& vel = simulator.get_lander().get_vel();
+
+  std::fprintf (visualiser,
+                "{ \"Return\": %g, \"x\": %g, \"y\": %g, \"vx\": %g, \"vy\": %g, \"rot\": %g, \"vrot\": %g, "
+                "\"thrust\": %g, \"rcs\": %g, \"breakage\": %g, \"crashed\": %s, \"landed\": %s }\n",
+                get_return(), pos.x(), pos.y(), vel.x(), vel.y(),
+                simulator.get_lander().get_rot(), simulator.get_lander().get_rot_vel(),
+                simulator.get_action().thrust, simulator.get_action().rcs,
+                simulator.get_lander().get_breakage(),
+                simulator.get_crashed() ? "true" : "false",
+                simulator.get_landed() ? "true" : "false");
 }

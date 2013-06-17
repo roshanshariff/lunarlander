@@ -2,7 +2,6 @@
 #define _SIMULATOR_HPP
 
 #include <vector>
-
 #include <Eigen/Core>
 
 using Eigen::Vector2d;
@@ -17,7 +16,7 @@ public:
     Vector2d pos;
     Matrix2d strength;
 
-    Vector2d impulses;
+    Vector2d impulse;
     bool collided;
     bool contacted;
 
@@ -26,7 +25,7 @@ public:
     }
 
     void reset_collision () {
-      impulses.setZero();
+      impulse.setZero();
       collided = false;
       contacted = false;
     }
@@ -39,18 +38,14 @@ private:
   double mu_s, mu_k, restitution;
   std::vector<collider> colliders;
 
-  Eigen::Vector2d pos, vel;
+  Vector2d pos, vel;
   double rot, rot_vel;
 
+  double breakage;
   double bounding_radius;
 
-  double breakage;
-
-  bool process_collisions (const double restitution,
-                           const std::vector<Vector2d>& colliders_dpos_dtheta,
-                           const Vector2d& new_pos,
-                           const double new_rot,
-                           const bool processing_contact);
+  bool process_collisions (const double restitution, const Vector2d& new_pos, const double new_rot,
+                           const std::vector<Vector2d>& colliders_dpos_drot, const bool contact_phase);
 
   void accumulate_breakage (double new_breakage) {
     breakage = std::max (breakage, new_breakage);
@@ -59,8 +54,7 @@ private:
 public:
 
   rigid_body(double mass, double mom_inertia, double mu_s, double mu_k, double restitution,
-             const std::vector<collider>& colliders)
-    : mass(mass), mom_inertia(mom_inertia), mu_s(mu_s), mu_k(mu_k), restitution(restitution), colliders(colliders) {}
+             const std::vector<collider>& colliders);
 
   void apply_impulse (Vector2d position, Vector2d impulse) {
     vel += impulse / mass;
@@ -147,6 +141,7 @@ public:
   void update(double dt);
 
   void set_action(const action& new_action);
+  const action& get_action () const { return current_action; }
 
   double get_main_throttle() const { return current_action.thrust / MAX_THRUST(); }
   double get_rcs_throttle() const { return current_action.rcs / MAX_RCS(); }

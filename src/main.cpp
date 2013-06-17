@@ -14,7 +14,7 @@ int main (int argc, char* argv[]) {
 
   unsigned int seed = boost::random::random_device()();
   if (argc > 1) seed = std::atoi (argv[1]);
-  std::cout << "# Using seed: " << seed << std::endl;
+  //std::cout << "# Using seed: " << seed << std::endl;
 
   boost::random::mt19937 agent_rng(seed);
   boost::random::mt19937 init_rng(0);
@@ -42,11 +42,10 @@ int main (int argc, char* argv[]) {
               dt,
               agent_time_steps);
 
-
   for (int i = 0; i < 20000; i++) {
+    f.set_visualiser (i % 1000 == 0 ? stdout : 0);
     std::vector<double> rewards = f.run_episode(init_rng, agent_rng);
-    double Return = std::accumulate(rewards.begin(), rewards.end(), 0.0);
-    std::fprintf(stdout, "%g\n", Return);
+    // std::fprintf(stdout, "%g\n", f.get_return());
     // if (f.simulator.get_landed()) std::printf("1 ");
     // else std::printf("0 ");
     // std::printf("%g\n", f.time_elapsed);

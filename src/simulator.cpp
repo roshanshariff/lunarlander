@@ -8,11 +8,21 @@
 #include <Eigen/Geometry>
 
 
-bool rigid_body::process_collisions (const double restitution,
-                                     const std::vector<Vector2d>& colliders_dpos_dtheta,
-                                     const Vector2d& new_pos,
-                                     const double new_rot,
-                                     const bool processing_contact) {
+rigid_body::rigid_body(double mass, double mom_inertia, double mu_s, double mu_k, double restitution,
+                       const std::vector<collider>& colliders)
+  : mass(mass), mom_inertia(mom_inertia), mu_s(mu_s), mu_k(mu_k), restitution(restitution),
+    colliders(colliders), breakage(0), bounding_radius(0) {
+
+  pos.setZero(); vel.setZero(); rot = 0; rot_vel = 0;
+
+  for (unsigned int i = 0; i < colliders.size(); ++i) {
+    bounding_radius = std::max (bounding_radius, colliders[i].pos.norm());
+  }
+}
+
+
+bool rigid_body::process_collisions (const double restitution, const Vector2d& new_pos, const double new_rot,
+                                     const std::vector<Vector2d>& colliders_dpos_drot, const bool contact_phase) {
 
   if (new_pos.y() > bounding_radius) return false;
 
@@ -39,7 +49,7 @@ bool rigid_body::process_collisions (const double restitution,
 
     if (new_pos.y() + colliders_rel_pos[i].y() > 0) break;
 
-    const Vector2d collider_vel = vel + rot_vel*colliders_dpos_dtheta[i];
+    const Vector2d collider_vel = vel + rot_vel*colliders_dpos_drot[i];
     if (collider_vel.y() > 0) continue;
 
     Matrix2d K;
@@ -59,10 +69,10 @@ bool rigid_body::process_collisions (const double restitution,
     }
 
     apply_impulse (colliders_rel_pos[i], impulse);
-    (processing_contact ? colliders[i].contacted : colliders[i].collided) = true;
+    (contact_phase ? colliders[i].contacted : colliders[i].collided) = true;
     collisions = true;
 
-    colliders[i].impulses += rot_matrix.inverse() * impulse;
+    colliders[i].impulse += rot_matrix.inverse() * impulse;
   }
 
   return collisions;
@@ -72,17 +82,17 @@ bool rigid_body::process_collisions (const double restitution,
 
 void rigid_body::update (const double dt, const Vector2d& force, const double torque) {
 
-  std::vector<Vector2d> colliders_dpos_dtheta (colliders.size());
+  std::vector<Vector2d> colliders_dpos_drot (colliders.size());
+
   {
-    Matrix2d rot_matrix;
-    double sin_rot = std::sin (rot);
-    double cos_rot = std::cos (rot);
-    rot_matrix <<
-      -sin_rot, -cos_rot,
-      cos_rot,  -sin_rot;
+    Eigen::Rotation2Dd rot_matrix (rot);
 
     for (unsigned int i = 0; i < colliders.size(); ++i) {
-      colliders_dpos_dtheta[i] = rot_matrix * colliders[i].pos;
+
+      Vector2d collider_dpos_drot (-colliders[i].pos.y(), colliders[i].pos.x());
+      colliders_dpos_drot[i] = rot_matrix * collider_dpos_drot;
+
+      colliders[i].reset_collision();
     }
   }
 
@@ -91,14 +101,12 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
 
   // Collision
 
-  for (unsigned int i = 0; i < colliders.size(); ++i) colliders[i].reset_collision();
-
   for (unsigned int i = 0; i < 5; ++i) {
 
     const Vector2d new_pos = pos + dt*(vel + delta_vel);
     const double new_rot = rot + dt*(rot + delta_rot_vel);
 
-    if (!process_collisions (restitution, colliders_dpos_dtheta, new_pos, new_rot, false)) break;
+    if (!process_collisions (restitution, new_pos, new_rot, colliders_dpos_drot, false)) break;
   }
 
   // Velocity update
@@ -113,7 +121,7 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
     const Vector2d new_pos = pos + dt*(vel + delta_vel);
     const double new_rot = rot + dt*(rot + delta_rot_vel);
 
-    if (!process_collisions (i/10.0, colliders_dpos_dtheta, new_pos, new_rot, true)) break;
+    if (!process_collisions (i/10.0, new_pos, new_rot, colliders_dpos_drot, true)) break;
   }
 
   // Position update
@@ -124,7 +132,7 @@ void rigid_body::update (const double dt, const Vector2d& force, const double to
   // Breakage
 
   for (unsigned int i = 0; i < colliders.size(); ++i) {
-    accumulate_breakage ((colliders[i].strength * colliders[i].impulses).norm());
+    breakage = std::max (breakage, (colliders[i].strength * colliders[i].impulse).norm());
   }
 
 }
