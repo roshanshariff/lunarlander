@@ -20,7 +20,7 @@ double framework::reward() {
     reward -= x_pos / lunar_lander_simulator::LANDER_WIDTH();
     if (simulator.get_landed()) reward += 1;
   }
-  else if (time_elapsed > 600) {
+  else if (time_elapsed > 60) {
     std::fprintf(stderr, "Time limit exceeded.\n");
     reward -= 10;
     simulator.set_crashed();
@@ -82,10 +82,11 @@ void framework::take_action(lunar_lander_simulator::action a) {
 }
 
 
-std::vector<double> framework::run_episode(boost::random::mt19937& rng) {
+std::vector<double> framework::run_episode(boost::random::mt19937& init_rng,
+                                           boost::random::mt19937& agent_rng) {
 
-  initialize_simulator(rng);
-  take_action(agent.initialize(rng, simulator_state()));
+  initialize_simulator(init_rng);
+  take_action(agent.initialize(agent_rng, simulator_state()));
 
   time_elapsed = 0;
   std::vector<double> rewards;
@@ -101,7 +102,7 @@ std::vector<double> framework::run_episode(boost::random::mt19937& rng) {
     rewards.push_back(Reward);
 
     bool terminal = simulator.get_crashed() || simulator.get_landed();
-    take_action(agent.update(rng, simulator_state(), Reward, terminal));
+    take_action(agent.update(agent_rng, simulator_state(), Reward, terminal));
 
     if (terminal) break;
   }

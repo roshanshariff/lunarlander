@@ -10,7 +10,7 @@
 
 using Eigen::VectorXd;
 
-class framework {
+struct framework {
 
   lunar_lander_simulator simulator;
   lunar_lander_agent agent;
@@ -30,7 +30,8 @@ public:
 
   void take_action(lunar_lander_simulator::action a);
 
-  std::vector<double> run_episode(boost::random::mt19937& rng);
+  std::vector<double> run_episode(boost::random::mt19937& init_rng,
+                                  boost::random::mt19937& agent_rng);
 
 };
 

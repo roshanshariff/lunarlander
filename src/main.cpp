@@ -16,14 +16,15 @@ int main (int argc, char* argv[]) {
   if (argc > 1) seed = std::atoi (argv[1]);
   std::cout << "# Using seed: " << seed << std::endl;
 
-  boost::random::mt19937 rng(seed);
+  boost::random::mt19937 agent_rng(seed);
+  boost::random::mt19937 init_rng(0);
 
   const double dt = 0.1;
   const int agent_time_steps = 5;
 
   const double lambda = 0.75;
   const double alpha_v = 0.1;
-  const double alpha_u = 0.1;
+  const double alpha_u = 1.0;
   const double initial_value = 1;
   const int num_features = 1<<20;
   const double tile_weight_exponent = 0.5; // 1 for no weighting
@@ -43,10 +44,15 @@ int main (int argc, char* argv[]) {
 
 
   for (int i = 0; i < 20000; i++) {
-    std::vector<double> rewards = f.run_episode(rng);
+    std::vector<double> rewards = f.run_episode(init_rng, agent_rng);
     double Return = std::accumulate(rewards.begin(), rewards.end(), 0.0);
     std::fprintf(stdout, "%g\n", Return);
+    // if (f.simulator.get_landed()) std::printf("1 ");
+    // else std::printf("0 ");
+    // std::printf("%g\n", f.time_elapsed);
   }
+
+
 
   // while (true) {
   //   std::vector<double> rewards = f.run_episode(rng);
