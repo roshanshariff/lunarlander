@@ -56,7 +56,7 @@ policy_gradient_actor lunar_lander_agent::make_thrust_actor
   return policy_gradient_actor (tc, lambda, alpha,
                                 0.0, max_thrust, // min and max action
                                 max_thrust/64, max_thrust/2, // min and max sigma
-                                0.0, max_thrust/10, // initial mu and sigma
+                                0.5, max_thrust/10, // initial mu and sigma
                                 1.0, // gamma
                                 trunc_normal);
 }

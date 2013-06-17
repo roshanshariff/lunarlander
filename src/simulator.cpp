@@ -169,8 +169,7 @@ std::vector<rigid_body::collider> lunar_lander_simulator::MAKE_COLLIDERS() {
   return colliders;
 }
 
-lunar_lander_simulator::lunar_lander_simulator (double dt) :
-  dt(dt),
+lunar_lander_simulator::lunar_lander_simulator () :
   lander(11036.4, // MASS in kg
          28258.7, // MOM_INERTIA in kg m^2
          1.0,     // MU_S
@@ -194,11 +193,11 @@ void lunar_lander_simulator::initialize(double pos_x, double pos_y, double vel_x
   crashed = false;
   current_action = action();
 
-  update();
+  update(0.0);
 }
 
 
-void lunar_lander_simulator::update() {
+void lunar_lander_simulator::update(double dt) {
 
   const double GRAVITY = 1.622; // m/s^2
 

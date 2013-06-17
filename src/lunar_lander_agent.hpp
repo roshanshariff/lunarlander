@@ -14,12 +14,6 @@ using Eigen::VectorXd;
 
 class lunar_lander_agent {
 
-public:
-
-
-
-private:
-
   VectorXd max_state, min_state, max_clip_state, min_clip_state;
 
   hashing_tile_coder tc;
@@ -58,6 +52,9 @@ public:
 
   lunar_lander_simulator::action update(boost::random::mt19937& rng, VectorXd state,
                                         double reward, bool terminal=false, bool learn=true);
+
+  const VectorXd& get_max_state() const { return max_state; }
+  const VectorXd& get_min_state() const { return min_state; }
 
 };
 

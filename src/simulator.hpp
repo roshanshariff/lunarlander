@@ -86,25 +86,23 @@ public:
     pos.y() = std::max(get_min_y(), pos.y());
   }
 
-  const Vector2d& get_pos() { return pos; }
+  const Vector2d& get_pos() const { return pos; }
 
   void set_vel(const Vector2d& new_vel) { vel = new_vel; }
-  const Vector2d& get_vel() { return vel; }
+  const Vector2d& get_vel() const { return vel; }
 
   void set_rot(double new_rot) {
     rot = new_rot;
     pos.y() = std::max(get_min_y(), pos.y());
   }
-  double get_rot() { return rot; }
+  double get_rot() const { return rot; }
 
   void set_rot_vel(double new_rot_vel) { rot_vel = new_rot_vel; }
-  double get_rot_vel() { return rot_vel; }
+  double get_rot_vel() const { return rot_vel; }
 
-  double get_mass() { return mass; }
-
-  double get_mom_inertia() { return mom_inertia; }
-
-  double get_breakage() { return breakage; }
+  double get_mass() const { return mass; }
+  double get_mom_inertia() const { return mom_inertia; }
+  double get_breakage() const { return breakage; }
 
 };
 
@@ -130,8 +128,7 @@ private:
   // Assuming descent stage 50% fuel, ascent stage 100% fuel
 
   static inline Vector2d IMAGE_TO_BODY_COORDS (double x, double y) {
-    static const double LANDER_WIDTH = 9.07; // m
-    return Vector2d(x - 0.5, y - 0.36335788) * LANDER_WIDTH;
+    return Vector2d(x - 0.5, y - 0.36335788) * LANDER_WIDTH();
   }
 
   static rigid_body::collider MAKE_LEG_COLLIDER (double x, double y, double strut_dir);
@@ -142,15 +139,27 @@ public:
 
   static double MAX_THRUST () { return 4.081113406545613; } // m/s^2
   static double MAX_RCS () { return 0.16056757359680382; } // rad/s^2
+  static double LANDER_WIDTH () { return 9.07; } // m
 
-
-  lunar_lander_simulator (double dt);
+  lunar_lander_simulator();
 
   void initialize(double pos_x=0, double pos_y=0, double vel_x=0, double vel_y=0, double rot=0, double rot_vel=0);
 
-  void update();
+  void update(double dt);
 
   void set_action(const action& new_action);
+
+  double get_main_throttle() const { return current_action.thrust / MAX_THRUST(); }
+  double get_rcs_throttle() const { return current_action.rcs / MAX_RCS(); }
+
+  bool get_crashed() const { return crashed; }
+  void set_crashed() { crashed = true; }
+
+  bool get_landed() const { return landed; }
+
+  const rigid_body& get_lander() const { return lander; }
+  rigid_body& get_lander() { return lander; }
+
 };
 
 #endif
