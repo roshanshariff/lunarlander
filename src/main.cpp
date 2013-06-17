@@ -1,6 +1,7 @@
 #include <numeric>
 #include <boost/nondet_random.hpp>
 #include <boost/random/mersenne_twister.hpp>
+#include <cstdlib>
 #include <cstdio>
 #include <vector>
 
@@ -9,12 +10,16 @@
 #include "lunar_lander_agent.hpp"
 #include "framework.hpp"
 
-int main () {
-  boost::random::random_device rand_dev;
-  boost::random::mt19937 rng(rand_dev());
+int main (int argc, char* argv[]) {
 
-  const double dt = 0.05;
-  const int agent_time_steps = 10;
+  unsigned int seed = boost::random::random_device()();
+  if (argc > 1) seed = std::atoi (argv[1]);
+  std::cout << "# Using seed: " << seed << std::endl;
+
+  boost::random::mt19937 rng(seed);
+
+  const double dt = 0.25;
+  const int agent_time_steps = 2;
 
   const double lambda = 0.75;
   const double alpha_v = 0.1;
