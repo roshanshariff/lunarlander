@@ -22,7 +22,7 @@ double framework::reward() {
   }
   else if (time_elapsed > 600) {
     std::fprintf(stderr, "Time limit exceeded.\n");
-    reward -= 1;
+    reward -= 10;
     simulator.set_crashed();
   }
 
