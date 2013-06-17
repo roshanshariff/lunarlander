@@ -18,8 +18,8 @@ int main (int argc, char* argv[]) {
 
   boost::random::mt19937 rng(seed);
 
-  const double dt = 0.25;
-  const int agent_time_steps = 2;
+  const double dt = 0.1;
+  const int agent_time_steps = 5;
 
   const double lambda = 0.75;
   const double alpha_v = 0.1;
