@@ -24,7 +24,7 @@ int main (int argc, char* argv[]) {
 
   const double lambda = 0.75;
   const double alpha_v = 0.1;
-  const double alpha_u = 0.4;
+  const double alpha_u = 0.1;
   const double initial_value = 1;
   const int num_features = 1<<20;
   const double tile_weight_exponent = 0.5; // 1 for no weighting
