@@ -63,7 +63,7 @@ class trunc_normal_distribution {
   double _alpha, _beta;
 
   double cdf_alpha, cdf_beta;
-  double delta, log_delta;
+	double delta;
 
 public:
 

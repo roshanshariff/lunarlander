@@ -118,7 +118,6 @@ public:
 
 private:
 
-  double dt;
   rigid_body lander;
 
   bool crashed, landed;
