@@ -24,7 +24,7 @@ class LunarLanderWindow (pyglet.window.Window):
         super(LunarLanderWindow, self).__init__(resizable=True, visible=False)
 
         self.framework = framework
-        
+
         self.push_handlers (framework.agent)
 
         self.simulator = framework.simulator
@@ -118,7 +118,7 @@ class LunarLanderWindow (pyglet.window.Window):
         rot_matrix = np.array([[cos_rot, -sin_rot], [sin_rot, cos_rot]])
 
         def exhaust_particles (group, opacity, vel, pos, radius, spread):
-            
+
             if opacity == 0: return
 
             pos = self.simulator.lander.pos + np.dot(rot_matrix, pos)
@@ -133,7 +133,7 @@ class LunarLanderWindow (pyglet.window.Window):
             size = self.scaleFactor * 2.0 * radius
             emitter = StaticEmitter (template=Particle(color=(1,1,1,0.1*opacity), size=(size,size), age=-dt),
                                      position=pos_domain, velocity=vel_domain)
-            emitter.emit(int(2000*dt), group)
+            emitter.emit(int(20*dt), group)
 
         thrust = self.simulator.main_throttle()
         exhaust_particles (self.thruster, thrust, [0,-50], self.simulator.thruster_pos,
@@ -219,7 +219,7 @@ class LunarLanderWindow (pyglet.window.Window):
         gluLookAt(0, 0, 0, 0, -1, 0, 0, 0, -1)
 
     def draw_ground_plane (self):
-        
+
         znear = self.camera_z - self.camera_near
         zfar = self.camera_z - self.camera_far
         wnear = self.camera_near * math.tan(self.fov_x/2.0)
@@ -272,4 +272,3 @@ class UserAgent (pyglet.window.key.KeyStateHandler):
         left = self.simulator.max_rcs if self[key.A] else 0.0
         right = self.simulator.max_rcs if self[key.D] else 0.0
         return (thrust, left-right)
-
