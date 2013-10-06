@@ -20,9 +20,9 @@ double framework::reward() {
     reward -= x_pos / lunar_lander_simulator::LANDER_WIDTH();
     if (simulator.get_landed()) reward += 1;
   }
-  else if (time_elapsed > 60) {
+  else if (time_elapsed > 180) {
     std::fprintf(stderr, "Time limit exceeded.\n");
-    reward -= 10;
+    reward -= 1;
     simulator.set_crashed();
   }
 
