@@ -37,6 +37,7 @@ int main (int argc, char* argv[]) {
     else if (std::string(argv[i]) == "--initial-value") initial_value = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--trunc-normal") trunc_normal = true;
     else if (std::string(argv[i]) == "--no-trunc-normal") trunc_normal = false;
+    else if (std::string(argv[i]) == "--tile-weight-exponent") tile_weight_exponent = std::atof(argv[++i]);
     else {
       std::fprintf (stderr, "Unknown parameter: %s\n",argv[i]);
       std::exit(1);
