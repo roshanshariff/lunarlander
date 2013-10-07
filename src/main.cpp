@@ -29,7 +29,7 @@ int main (int argc, char* argv[]) {
   double initial_value = 1;
   int num_features = 1<<20;
   double tile_weight_exponent = 0.5; // 1 for no weighting
-  bool trunc_normal = true;
+  bool trunc_normal = false;
 
   std::vector<int> subspaces { 0, 1, 2, 6 };
 
