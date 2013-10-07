@@ -1,0 +1,18 @@
+{
+  "root_path": "../../",
+  "experiment": "Cluster.experiment",
+
+  "options": {
+    "__resource_limits__": "walltime=10:00:00,mem=256mb"
+  },
+
+  "param_config": {
+    "num_runs": [50],
+    "episodes": [20000],
+    "Lambda": [0.75],
+    "alpha_v": [0.1],
+    "alpha_u": [0.1],
+    "trunc_normal": [false],
+    "tile_weight_exponent": [0.5, 1.0]
+  }
+}
