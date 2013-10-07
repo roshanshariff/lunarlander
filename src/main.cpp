@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
+#include <string>
 
 #include "utility.hpp"
 #include "simulator.hpp"
@@ -22,13 +23,26 @@ int main (int argc, char* argv[]) {
   const double dt = 0.1;
   const int agent_time_steps = 5;
 
-  const double lambda = 0.75;
-  const double alpha_v = 0.1;
-  const double alpha_u = 0.1;
-  const double initial_value = 1;
-  const int num_features = 1<<20;
-  const double tile_weight_exponent = 0.5; // 1 for no weighting
-  const bool trunc_normal = true;
+  double lambda = 0.75;
+  double alpha_v = 0.1;
+  double alpha_u = 0.1;
+  double initial_value = 1;
+  int num_features = 1<<20;
+  double tile_weight_exponent = 0.5; // 1 for no weighting
+  bool trunc_normal = true;
+
+  for (int i = 1; i < argc; ++i) {
+    if (std::string(argv[i]) == "--lambda") lambda = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--alpha-v") alpha_v = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--alpha-u") alpha_u = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--initial-value") initial_value = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--trunc-normal") trunc_normal = true;
+    else if (std::string(argv[i]) == "--no-trunc-normal") trunc_normal = false;
+    else {
+      std::cerr << "Unknown parameter: " << argv[i] << '\n';
+      std::exit(1);
+    }
+  }
 
   std::vector<int> subspaces;
   subspaces.push_back(0);
