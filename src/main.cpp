@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <iterator>
 
 #include "utility.hpp"
 #include "simulator.hpp"
@@ -29,6 +31,10 @@ int main (int argc, char* argv[]) {
   double tile_weight_exponent = 0.5; // 1 for no weighting
   bool trunc_normal = true;
 
+  std::vector<int> subspaces { 0, 1, 2, 6 };
+
+  bool visualize = false;
+
   for (int i = 1; i < argc; ++i) {
     if (std::string(argv[i]) == "--episodes") num_episodes = std::atoi(argv[++i]);
     else if (std::string(argv[i]) == "--lambda") lambda = std::atof(argv[++i]);
@@ -38,17 +44,16 @@ int main (int argc, char* argv[]) {
     else if (std::string(argv[i]) == "--trunc-normal") trunc_normal = true;
     else if (std::string(argv[i]) == "--no-trunc-normal") trunc_normal = false;
     else if (std::string(argv[i]) == "--tile-weight-exponent") tile_weight_exponent = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--visualize") visualize = true;
+    else if (std::string(argv[i]) == "--subspaces") {
+      std::istringstream arg (argv[++i]);
+      subspaces.assign (std::istream_iterator<int>(arg), std::istream_iterator<int>());
+    }
     else {
       std::fprintf (stderr, "Unknown parameter: %s\n",argv[i]);
       std::exit(1);
     }
   }
-
-  std::vector<int> subspaces;
-  subspaces.push_back(0);
-  subspaces.push_back(1);
-  subspaces.push_back(2);
-  subspaces.push_back(6);
 
   framework f(lunar_lander_simulator(),
               lunar_lander_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
@@ -57,27 +62,11 @@ int main (int argc, char* argv[]) {
               agent_time_steps);
 
   for (int i = 0; i < num_episodes; i++) {
-    //f.set_visualiser (i % 1000 == 0 ? stdout : 0);
+    if (visualize) f.set_visualiser (i % 1000 == 0 ? stdout : 0);
     std::vector<double> rewards = f.run_episode(init_rng, agent_rng);
-    std::fprintf(stdout, "%g\n", f.get_return());
-    // if (f.simulator.get_landed()) std::printf("1 ");
-    // else std::printf("0 ");
+    if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
     // std::printf("%g\n", f.time_elapsed);
   }
-
-
-
-  // while (true) {
-  //   std::vector<double> rewards = f.run_episode(rng);
-  //   double Return = std::accumulate(rewards.begin(), rewards.end(), 0.0);
-  //   std::fprintf(stderr, "Return: %g\n", Return);
-  //   if (Return < -50) {
-  //     for (unsigned int i = 0; i < rewards.size(); i++) {
-  //       printf("%g\n", rewards[i]);
-  //     }
-  //     break;
-  //   }
-  // }
 
   return 0;
 }
