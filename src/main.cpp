@@ -28,7 +28,7 @@ int main (int argc, char* argv[]) {
   const double initial_value = 1;
   const int num_features = 1<<20;
   const double tile_weight_exponent = 0.5; // 1 for no weighting
-  const bool trunc_normal = false;
+  const bool trunc_normal = true;
 
   std::vector<int> subspaces;
   subspaces.push_back(0);
@@ -45,7 +45,7 @@ int main (int argc, char* argv[]) {
   for (int i = 0; i < 20000; i++) {
     f.set_visualiser (i % 1000 == 0 ? stdout : 0);
     std::vector<double> rewards = f.run_episode(init_rng, agent_rng);
-    // std::fprintf(stdout, "%g\n", f.get_return());
+    //std::fprintf(stdout, "%g\n", f.get_return());
     // if (f.simulator.get_landed()) std::printf("1 ");
     // else std::printf("0 ");
     // std::printf("%g\n", f.time_elapsed);
