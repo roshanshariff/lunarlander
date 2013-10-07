@@ -28,9 +28,9 @@ target_link_libraries (main ${Boost_LIBRARIES})
 set (CMAKE_BUILD_TYPE Release)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-   add_definitions ("-Werror -Wall -Wextra -march=native -mno-avx")
+   add_definitions ("-Werror -Wall -Wextra -march=native -mno-avx -O3")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-   add_definitions ("-Werror -Wall")
+   add_definitions ("-Werror -Wall -O3")
 endif()
