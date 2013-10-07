@@ -2,7 +2,7 @@
 #define _POLICY_GRADIENT_AGENT_HPP
 
 #include <cmath>
-#include <boost/random/mersenne_twister.hpp>
+#include <random>
 #include <Eigen/Core>
 #include <deque>
 #include <utility>
@@ -90,7 +90,7 @@ public:
 
   trunc_normal_distribution action_dist() const;
 
-  double act(boost::random::mt19937& rng, const VectorXi& new_features) {
+  double act(std::mt19937& rng, const VectorXi& new_features) {
     features = new_features;
     action = action_dist()(rng);
     return action;

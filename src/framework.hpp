@@ -1,7 +1,7 @@
 #ifndef _FRAMEWORK_HPP
 #define _FRAMEWORK_HPP
 
-#include <boost/random/mersenne_twister.hpp>
+#include <random>
 #include <Eigen/Core>
 #include <vector>
 #include <cstdio>
@@ -27,14 +27,14 @@ public:
 
   double reward();
 
-  void initialize_simulator(boost::random::mt19937& rng);
+  void initialize_simulator(std::mt19937& rng);
 
   VectorXd simulator_state() const;
 
   void take_action(lunar_lander_simulator::action a);
 
-  std::vector<double> run_episode(boost::random::mt19937& init_rng,
-                                  boost::random::mt19937& agent_rng);
+  std::vector<double> run_episode(std::mt19937& init_rng,
+                                  std::mt19937& agent_rng);
 
   double get_return () const { return _return; }
 

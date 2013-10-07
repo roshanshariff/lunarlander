@@ -1,6 +1,5 @@
 #include <numeric>
-#include <boost/nondet_random.hpp>
-#include <boost/random/mersenne_twister.hpp>
+#include <random>
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
@@ -13,10 +12,10 @@
 
 int main (int argc, char* argv[]) {
 
-  unsigned int seed = boost::random::random_device()();
+  unsigned int seed = std::random_device()();
 
-  boost::random::mt19937 agent_rng(seed);
-  boost::random::mt19937 init_rng(0);
+  std::mt19937 agent_rng(seed);
+  std::mt19937 init_rng(0);
 
   const double dt = 0.1;
   const int agent_time_steps = 5;
@@ -39,7 +38,7 @@ int main (int argc, char* argv[]) {
     else if (std::string(argv[i]) == "--trunc-normal") trunc_normal = true;
     else if (std::string(argv[i]) == "--no-trunc-normal") trunc_normal = false;
     else {
-      std::cerr << "Unknown parameter: " << argv[i] << '\n';
+      std::fprintf (stderr, "Unknown parameter: %s\n",argv[i]);
       std::exit(1);
     }
   }

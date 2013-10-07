@@ -21,16 +21,16 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/Modules
 find_package (Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-find_package (Boost 1.46.0 COMPONENTS random REQUIRED)
+find_package (Boost 1.46.0 REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 target_link_libraries (main ${Boost_LIBRARIES})
 
 set (CMAKE_BUILD_TYPE Release)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-   add_definitions ("-Wall -Wextra -march=native -mno-avx -O3")
+   add_definitions ("-std=c++11 -Wall -Wextra -march=native -mno-avx -O3")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-   add_definitions ("-Wall -O3")
+   add_definitions ("-std=c++11 -Wall -O3")
 endif()

@@ -1,6 +1,5 @@
 #include <boost/math/constants/constants.hpp>
-#include <boost/random/normal_distribution.hpp>
-#include <boost/random/uniform_real.hpp>
+#include <random>
 #include <cstdlib>
 #include <cstdio>
 
@@ -37,10 +36,10 @@ double framework::reward() {
 }
 
 
-void framework::initialize_simulator(boost::random::mt19937& rng) {
+void framework::initialize_simulator(std::mt19937& rng) {
 
-  typedef boost::random::uniform_real_distribution<double> uniform;
-  typedef boost::random::normal_distribution<double> normal;
+  typedef std::uniform_real_distribution<double> uniform;
+  typedef std::normal_distribution<double> normal;
   const double PI = boost::math::constants::pi<double>();
 
   double rotation = normal(0, PI/8)(rng);
@@ -82,8 +81,8 @@ void framework::take_action(lunar_lander_simulator::action a) {
 }
 
 
-std::vector<double> framework::run_episode(boost::random::mt19937& init_rng,
-                                           boost::random::mt19937& agent_rng) {
+std::vector<double> framework::run_episode(std::mt19937& init_rng,
+                                           std::mt19937& agent_rng) {
 
   initialize_simulator(init_rng);
   take_action(agent.initialize(agent_rng, simulator_state()));

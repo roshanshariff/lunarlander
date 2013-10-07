@@ -2,9 +2,8 @@
 #define _UTILITY_HPP
 
 #include <cmath>
+#include <random>
 
-#include <boost/random/normal_distribution.hpp>
-#include <boost/random/uniform_real.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/special_functions/erf.hpp>
 
@@ -30,7 +29,7 @@ inline double norm_quantile(double p) {
 
 class normal_distribution {
 
-  boost::random::normal_distribution<double> dist;
+  std::normal_distribution<double> dist;
 
 public:
 
@@ -38,7 +37,7 @@ public:
 
   double mean() const { return dist.mean(); }
 
-  double sigma() const { return dist.sigma(); }
+  double sigma() const { return dist.stddev(); }
 
   double pdf(double x) const {
     return norm_pdf((x-mean())/sigma());
@@ -93,7 +92,7 @@ public:
   }
 
   template <class Engine> double operator()(Engine& rng) const {
-    double cdf_x = boost::random::uniform_real_distribution<double>(cdf_alpha, cdf_beta)(rng);
+    double cdf_x = std::uniform_real_distribution<double>(cdf_alpha, cdf_beta)(rng);
     return norm_quantile(cdf_x) * sigma() + mu();
   }
 

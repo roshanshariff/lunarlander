@@ -74,7 +74,7 @@ policy_gradient_actor lunar_lander_agent::make_rcs_actor
 }
 
 
-lunar_lander_simulator::action lunar_lander_agent::initialize(boost::random::mt19937& rng, VectorXd state) {
+lunar_lander_simulator::action lunar_lander_agent::initialize(std::mt19937& rng, VectorXd state) {
   clip_state(state);
   VectorXi features = tc.indices(state);
 
@@ -86,7 +86,7 @@ lunar_lander_simulator::action lunar_lander_agent::initialize(boost::random::mt1
 }
 
 
-lunar_lander_simulator::action lunar_lander_agent::update(boost::random::mt19937& rng, VectorXd state,
+lunar_lander_simulator::action lunar_lander_agent::update(std::mt19937& rng, VectorXd state,
                                                           double reward, bool terminal, bool learn) {
   clip_state(state);
   VectorXi features = tc.indices(state);

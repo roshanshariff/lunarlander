@@ -2,8 +2,8 @@
 #define _LUNAR_LANDER_AGENT_HPP
 
 #include <vector>
+#include <random>
 #include <boost/math/constants/constants.hpp>
-#include <boost/random/mersenne_twister.hpp>
 #include <Eigen/Core>
 
 #include "simulator.hpp"
@@ -24,7 +24,7 @@ class lunar_lander_agent {
   static policy_gradient_actor make_thrust_actor (const tile_coder_base& tc, double lambda, double alpha, bool trunc_normal);
   static policy_gradient_actor make_rcs_actor (const tile_coder_base& tc, double lambda, double alpha, bool trunc_normal);
 
-  lunar_lander_simulator::action compute_action(boost::random::mt19937& rng, const VectorXi& features) {
+  lunar_lander_simulator::action compute_action(std::mt19937& rng, const VectorXi& features) {
     return lunar_lander_simulator::action(thrust_actor.act(rng, features), rcs_actor.act(rng, features));
   }
 
@@ -48,9 +48,9 @@ public:
       rcs_actor (make_rcs_actor (tc, lambda, alpha_u, trunc_normal))
   { }
 
-  lunar_lander_simulator::action initialize(boost::random::mt19937& rng, VectorXd state);
+  lunar_lander_simulator::action initialize(std::mt19937& rng, VectorXd state);
 
-  lunar_lander_simulator::action update(boost::random::mt19937& rng, VectorXd state,
+  lunar_lander_simulator::action update(std::mt19937& rng, VectorXd state,
                                         double reward, bool terminal=false, bool learn=true);
 
   const VectorXd& get_max_state() const { return max_state; }
