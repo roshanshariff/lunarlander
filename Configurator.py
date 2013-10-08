@@ -20,7 +20,7 @@ def configurator_for (func):
 
 # Test code
 
-def testfunc (**kwargs):
+def testfunc (a, b):
     print (locals())
 
 @configurator_for(testfunc)
