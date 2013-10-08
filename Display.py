@@ -1,7 +1,10 @@
+from __future__ import print_function
+
 import math
 import pyglet
-from pyglet.gl import *
+import pyglet.gl as gl
 from pyglet.window import key
+from pyglet.clock import ClockDisplay
 import numpy as np
 
 try:
@@ -14,7 +17,7 @@ try:
     lepton_loaded = True
 except ImportError:
     lepton_loaded = False
-    print 'Lepton not found; particle effects disabled.'
+    print('Lepton not found; particle effects disabled.')
 
 
 class LunarLanderWindow (pyglet.window.Window):
@@ -34,7 +37,9 @@ class LunarLanderWindow (pyglet.window.Window):
         self.load_resources()
 
         self.set_caption('Lunar Lander')
-        glDisable(GL_DEPTH_TEST)
+        gl.glDisable(gl.GL_DEPTH_TEST)
+
+        self.fps_display = ClockDisplay()
 
         self.set_visible (True)
         self.start()
@@ -93,7 +98,7 @@ class LunarLanderWindow (pyglet.window.Window):
 
         dt = self.simulator.dt
         if not self.framework.run(dt, learn=False):
-            print 'Return =', self.framework.Return
+            print ('Return = {}'.format(self.framework.Return))
             self.start(1.0)
 
         self.update_particles(dt)
@@ -158,23 +163,25 @@ class LunarLanderWindow (pyglet.window.Window):
         self.draw_ground_plane()
         self.target.draw()
         self.shadow.draw()
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPopMatrix()
 
         if lepton_loaded:
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+            gl.glEnable(gl.GL_BLEND)
+            gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
             self.thruster.draw()
             self.rcs.draw()
 
         self.lander.draw()
-        glPopMatrix()
+        gl.glPopMatrix()
 
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
 
         if self.crashed.visible: self.crashed.draw()
         if self.landed.visible: self.landed.draw()
+
+        self.fps_display.draw()
 
     def push_camera_projection (self):
 
@@ -200,23 +207,23 @@ class LunarLanderWindow (pyglet.window.Window):
         self.camera_near = self.camera_y / math.tan(self.fov_y/2.0)
         self.camera_far = math.sqrt(2*moon_radius*self.camera_y)
 
-        glMatrixMode (GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        gluPerspective (math.degrees(self.fov_y), self.display_width/self.display_height,
+        gl.glMatrixMode (gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+        gl.gluPerspective (math.degrees(self.fov_y), self.display_width/self.display_height,
                         self.camera_near, self.camera_far)
 
     def push_default_view (self):
-        glMatrixMode (GL_MODELVIEW)
-        glPushMatrix()
-        gluLookAt (self.camera_x, self.camera_y, self.camera_z,
+        gl.glMatrixMode (gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.gluLookAt (self.camera_x, self.camera_y, self.camera_z,
                    self.camera_x, self.camera_y, 0.0,
                    0.0, 1.0, 0.0)
 
     def push_ground_view (self):
-        glMatrixMode (GL_MODELVIEW)
-        glPushMatrix()
-        gluLookAt(0, 0, 0, 0, -1, 0, 0, 0, -1)
+        gl.glMatrixMode (gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.gluLookAt(0, 0, 0, 0, -1, 0, 0, 0, -1)
 
     def draw_ground_plane (self):
 
@@ -228,24 +235,24 @@ class LunarLanderWindow (pyglet.window.Window):
 
         coords = (x-wnear, znear, x+wnear, znear, x+wfar, zfar, x-wfar, zfar)
 
-        glEnable (self.ground_tex.target)
-        glBindTexture (self.ground_tex.target, self.ground_tex.id)
-        glMatrixMode(GL_TEXTURE)
-        glPushMatrix()
-        glLoadIdentity()
-        glTranslated(0.5, 0.5, 0)
-        glScaled(1.0/(200*self.scaleFactor), 1.0/(200*self.scaleFactor), 0.0)
-        pyglet.graphics.draw (4, GL_QUADS, ('v2f', coords), ('t2f', coords))
-        glPopMatrix()
-        glBindTexture (self.ground_tex.target, 0)
-        glDisable (self.ground_tex.target)
+        gl.glEnable (self.ground_tex.target)
+        gl.glBindTexture (self.ground_tex.target, self.ground_tex.id)
+        gl.glMatrixMode(gl.GL_TEXTURE)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+        gl.glTranslated(0.5, 0.5, 0)
+        gl.glScaled(1.0/(200*self.scaleFactor), 1.0/(200*self.scaleFactor), 0.0)
+        pyglet.graphics.draw (4, gl.GL_QUADS, ('v2f', coords), ('t2f', coords))
+        gl.glPopMatrix()
+        gl.glBindTexture (self.ground_tex.target, 0)
+        gl.glDisable (self.ground_tex.target)
 
     def on_resize (self, width, height):
 
-        glViewport(0, 0, width, height)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        glOrtho(0, width, 0, height, -1, 1)
+        gl.glViewport(0, 0, width, height)
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        gl.glOrtho(0, width, 0, height, -1, 1)
 
         diag = 2.0 * math.tan(self.fov_diag/2.0)/math.hypot(width,height)
         self.fov_x = 2.0 * math.atan (width*diag/2.0)

@@ -2,7 +2,7 @@ import json
 import sys
 
 from Simulator import LunarLanderSimulator
-from Display import pyglet, LunarLanderWindow
+from Display import LunarLanderWindow
 
 class Framework:
 
