@@ -19,8 +19,8 @@ int main (int argc, char* argv[]) {
   std::mt19937 agent_rng(seed);
   std::mt19937 init_rng(0);
 
-  const double dt = 0.1;
-  const int agent_time_steps = 5;
+  double dt = 0.05;
+  int agent_time_steps = 10;
 
   int num_episodes = 20000;
   double lambda = 0.75;
@@ -36,7 +36,9 @@ int main (int argc, char* argv[]) {
   bool visualize = false;
 
   for (int i = 1; i < argc; ++i) {
-    if (std::string(argv[i]) == "--episodes") num_episodes = std::atoi(argv[++i]);
+    if (std::string(argv[i]) == "--dt") dt = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--agent_steps") agent_time_steps = std::atoi(argv[++i]);
+    else if (std::string(argv[i]) == "--episodes") num_episodes = std::atoi(argv[++i]);
     else if (std::string(argv[i]) == "--lambda") lambda = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--alpha-v") alpha_v = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--alpha-u") alpha_u = std::atof(argv[++i]);

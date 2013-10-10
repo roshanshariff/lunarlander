@@ -2,6 +2,18 @@ import numpy as np
 import itertools
 import matplotlib.pyplot as plt
 
+def load_results(file_name):
+    run_number = 0
+    results = []
+    while True:
+        try:
+            results.append(np.loadtxt(file_name.format(run_number)))
+            run_number += 1
+        except IOError:
+            break
+    print("Loaded {} runs".format(run_number))
+    return np.array(results)
+
 def aggregate_results(results):
     results_sum = results.cumsum(axis=1)
     results_mean = results_sum.mean(axis=0)
