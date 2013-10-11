@@ -89,7 +89,6 @@ void framework::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
 
   initialize_simulator(init_rng);
   take_action(agent.initialize(agent_rng, simulator_state()));
-  send_visualiser_data();
 
   _return = 0;
   rewards.clear();
@@ -100,9 +99,9 @@ void framework::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
   while (!terminal) {
 
     for (int i = 0; i < agent_time_steps && !terminal; ++i) {
+      send_visualiser_data();
       simulator.update(dt);
       time_elapsed += dt;
-      send_visualiser_data();
       terminal = simulator.get_crashed() || simulator.get_landed();
     }
 
@@ -113,6 +112,7 @@ void framework::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
     take_action(agent.update(agent_rng, simulator_state(), _reward, terminal));
   }
 
+  send_visualiser_data();
   if (visualiser) std::fflush (visualiser);
 }
 
