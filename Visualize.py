@@ -45,5 +45,5 @@ class Framework:
         self.simulator.landed = landed
 
 simulator = LunarLanderSimulator()
-simulator.dt = 0.1
+simulator.dt = 0.05
 framework = Framework (simulator, sys.stdin)

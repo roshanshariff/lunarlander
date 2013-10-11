@@ -1,6 +1,8 @@
 import numpy as np
-import itertools
 import matplotlib.pyplot as plt
+import glob
+import os
+import re
 
 def load_results(file_name):
     run_number = 0
@@ -13,6 +15,13 @@ def load_results(file_name):
             break
     print("Loaded {} runs".format(run_number))
     return np.array(results)
+
+def load_directory(directory):
+    for pathname in glob.iglob (os.path.join(directory, "*-0.txt")):
+        pattern = re.sub (r'^(.*-)0(\.txt)$', r'\1{}\2', pathname)
+        (basename,) = re.findall (r'^(.*)-0.txt', os.path.basename(pathname), flags=re.I)
+        print ("Loading {}".format(basename))
+        yield (basename, load_results(pattern))
 
 def aggregate_results(results):
     results_sum = results.cumsum(axis=1)

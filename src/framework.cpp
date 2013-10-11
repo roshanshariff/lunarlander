@@ -7,7 +7,7 @@
 
 double framework::reward() {
 
-  double reward = 0;
+  double reward = -0.05 * simulator.get_main_throttle();
 
   double x_pos = std::abs (simulator.get_lander().get_pos().x());
   if (x_pos > 100) {
@@ -15,22 +15,26 @@ double framework::reward() {
     x_pos = 100;
   }
 
-  if (simulator.get_crashed() || simulator.get_landed()) {
+  const bool episode_terminated = simulator.get_crashed() || simulator.get_landed();
+  const bool time_exceeded = time_elapsed > 180;
+
+  if (episode_terminated || time_exceeded) {
+
     reward -= x_pos / lunar_lander_simulator::LANDER_WIDTH();
+
     if (simulator.get_landed()) reward += 1;
-  }
-  else if (time_elapsed > 180) {
-    std::fprintf(stderr, "Time limit exceeded.\n");
-    reward -= 1;
-    simulator.set_crashed();
+
+    if (!episode_terminated && time_exceeded) {
+      std::fprintf(stderr, "Time limit exceeded.\n");
+      simulator.set_crashed();
+      reward -= 1;
+    }
   }
 
   if (!simulator.get_landed()) {
     reward -= std::log10 (1 + simulator.get_lander().get_breakage());
     simulator.get_lander().reset_breakage();
   }
-
-  reward -= 0.01 * simulator.get_main_throttle();
 
   return reward;
 }
@@ -81,38 +85,35 @@ void framework::take_action(lunar_lander_simulator::action a) {
 }
 
 
-std::vector<double> framework::run_episode(std::mt19937& init_rng,
-                                           std::mt19937& agent_rng) {
+void framework::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
 
   initialize_simulator(init_rng);
   take_action(agent.initialize(agent_rng, simulator_state()));
   send_visualiser_data();
 
-  time_elapsed = 0;
   _return = 0;
-  std::vector<double> rewards;
+  rewards.clear();
+  time_elapsed = 0;
 
-  while (true) {
-    for (int i = 0; i < agent_time_steps; ++i) {
-      if (simulator.get_landed() || simulator.get_crashed()) break;
+  bool terminal = false;
+
+  while (!terminal) {
+
+    for (int i = 0; i < agent_time_steps && !terminal; ++i) {
       simulator.update(dt);
       time_elapsed += dt;
       send_visualiser_data();
+      terminal = simulator.get_crashed() || simulator.get_landed();
     }
 
     double _reward = reward();
     _return += _reward;
     rewards.push_back(_reward);
 
-    bool terminal = simulator.get_crashed() || simulator.get_landed();
     take_action(agent.update(agent_rng, simulator_state(), _reward, terminal));
-
-    if (terminal) break;
   }
 
   if (visualiser) std::fflush (visualiser);
-
-  return rewards;
 }
 
 
