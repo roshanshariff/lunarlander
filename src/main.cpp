@@ -39,8 +39,8 @@ int main (int argc, char* argv[]) {
   bool visualize = false;
 
   for (int i = 1; i < argc; ++i) {
-    if (std::string(argv[i]) == "--agent-seed") agent_seed = std::atoi(argv[++i]);
-    else if (std::string(argv[i]) == "--init-seed") init_seed = std::atoi(argv[++i]);
+    if (std::string(argv[i]) == "--agent-seed") agent_seed = std::strtoul(argv[++i], nullptr, 10);
+    else if (std::string(argv[i]) == "--init-seed") init_seed = std::strtoul(argv[++i], nullptr, 10);
     else if (std::string(argv[i]) == "--dt") dt = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--agent_steps") agent_time_steps = std::atoi(argv[++i]);
     else if (std::string(argv[i]) == "--episodes") num_episodes = std::atoi(argv[++i]);
