@@ -16,10 +16,11 @@
 
 int main (int argc, char* argv[]) {
 
-  unsigned int seed = std::random_device()();
+  std::random_device rdev;
 
-  std::mt19937 agent_rng(seed);
-  std::mt19937 init_rng(0);
+  unsigned int agent_seed = rdev();
+  unsigned int init_seed = rdev();
+
 
   double dt = 0.05;
   int agent_time_steps = 10;
@@ -38,7 +39,9 @@ int main (int argc, char* argv[]) {
   bool visualize = false;
 
   for (int i = 1; i < argc; ++i) {
-    if (std::string(argv[i]) == "--dt") dt = std::atof(argv[++i]);
+    if (std::string(argv[i]) == "--agent-seed") agent_seed = std::atoi(argv[++i]);
+    else if (std::string(argv[i]) == "--init-seed") init_seed = std::atoi(argv[++i]);
+    else if (std::string(argv[i]) == "--dt") dt = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--agent_steps") agent_time_steps = std::atoi(argv[++i]);
     else if (std::string(argv[i]) == "--episodes") num_episodes = std::atoi(argv[++i]);
     else if (std::string(argv[i]) == "--lambda") lambda = std::atof(argv[++i]);
@@ -67,6 +70,10 @@ int main (int argc, char* argv[]) {
       std::exit(1);
     }
   }
+
+  std::mt19937 agent_rng(agent_seed);
+  std::mt19937 init_rng(init_seed);
+  std::fprintf(stdout, "# agent-seed = %u\n# init-seed = %u\n", agent_seed, init_seed);
 
   framework f(lunar_lander_simulator(),
               lunar_lander_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
