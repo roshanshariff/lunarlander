@@ -56,7 +56,10 @@ int main (int argc, char* argv[]) {
       char sep;
       while (arg >> dim) {
         subspaces.push_back(dim);
-        arg >> sep;
+        if (arg >> sep && sep != ',') {
+          fprintf(stderr, "Invalid subspaces argument\n");
+          return 1;
+        }
       }
     }
     else {
