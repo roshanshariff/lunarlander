@@ -6,6 +6,8 @@
 #include <string>
 #include <sstream>
 #include <iterator>
+#include <regex>
+#include <iostream>
 
 #include "utility.hpp"
 #include "simulator.hpp"
@@ -19,8 +21,8 @@ int main (int argc, char* argv[]) {
   std::mt19937 agent_rng(seed);
   std::mt19937 init_rng(0);
 
-  const double dt = 0.1;
-  const int agent_time_steps = 5;
+  double dt = 0.05;
+  int agent_time_steps = 10;
 
   int num_episodes = 20000;
   double lambda = 0.75;
@@ -36,7 +38,9 @@ int main (int argc, char* argv[]) {
   bool visualize = false;
 
   for (int i = 1; i < argc; ++i) {
-    if (std::string(argv[i]) == "--episodes") num_episodes = std::atoi(argv[++i]);
+    if (std::string(argv[i]) == "--dt") dt = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--agent_steps") agent_time_steps = std::atoi(argv[++i]);
+    else if (std::string(argv[i]) == "--episodes") num_episodes = std::atoi(argv[++i]);
     else if (std::string(argv[i]) == "--lambda") lambda = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--alpha-v") alpha_v = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--alpha-u") alpha_u = std::atof(argv[++i]);
@@ -46,8 +50,17 @@ int main (int argc, char* argv[]) {
     else if (std::string(argv[i]) == "--tile-weight-exponent") tile_weight_exponent = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--visualize") visualize = true;
     else if (std::string(argv[i]) == "--subspaces") {
-      std::istringstream arg (argv[++i]);
-      subspaces.assign (std::istream_iterator<int>(arg), std::istream_iterator<int>());
+      subspaces.clear();
+      std::istringstream arg(argv[++i]);
+      int dim;
+      char sep;
+      while (arg >> dim) {
+        subspaces.push_back(dim);
+        if (arg >> sep && sep != ',') {
+          fprintf(stderr, "Invalid subspaces argument\n");
+          return 1;
+        }
+      }
     }
     else {
       std::fprintf (stderr, "Unknown parameter: %s\n",argv[i]);
