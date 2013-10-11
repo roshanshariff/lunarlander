@@ -7,7 +7,7 @@
 
 double framework::reward() {
 
-  double reward = 0;
+  double reward = -0.05 * simulator.get_main_throttle();
 
   double x_pos = std::abs (simulator.get_lander().get_pos().x());
   if (x_pos > 100) {
@@ -15,22 +15,26 @@ double framework::reward() {
     x_pos = 100;
   }
 
-  if (simulator.get_crashed() || simulator.get_landed()) {
+  const bool episode_terminated = simulator.get_crashed() || simulator.get_landed();
+  const bool time_exceeded = time_elapsed > 180;
+
+  if (episode_terminated || time_exceeded) {
+
     reward -= x_pos / lunar_lander_simulator::LANDER_WIDTH();
+
     if (simulator.get_landed()) reward += 1;
-  }
-  else if (time_elapsed > 180) {
-    std::fprintf(stderr, "Time limit exceeded.\n");
-    reward -= 1;
-    simulator.set_crashed();
+
+    if (!episode_terminated && time_exceeded) {
+      std::fprintf(stderr, "Time limit exceeded.\n");
+      simulator.set_crashed();
+      reward -= 1;
+    }
   }
 
   if (!simulator.get_landed()) {
     reward -= std::log10 (1 + simulator.get_lander().get_breakage());
     simulator.get_lander().reset_breakage();
   }
-
-  reward -= 0.01 * simulator.get_main_throttle();
 
   return reward;
 }
