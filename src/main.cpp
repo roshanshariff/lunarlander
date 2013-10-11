@@ -86,8 +86,13 @@ int main (int argc, char* argv[]) {
               agent_time_steps);
 
   for (int i = 0; i < num_episodes; i++) {
-    if (visualize && i >= visualize_from) f.set_visualiser (i % visualize_every == 0 ? stdout : nullptr);
+
+    if (visualize && i >= visualize_from) {
+      f.set_visualiser ((i - visualize_from) % visualize_every == 0 ? stdout : nullptr);
+    }
+
     f.run_episode(init_rng, agent_rng);
+
     if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
     // std::printf("%g\n", f.time_elapsed);
   }
