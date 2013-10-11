@@ -77,7 +77,7 @@ int main (int argc, char* argv[]) {
 
   std::mt19937 agent_rng(agent_seed);
   std::mt19937 init_rng(init_seed);
-  std::fprintf(stdout, "# agent-seed = %u\n# init-seed = %u\n", agent_seed, init_seed);
+  if (!visualize) std::fprintf(stdout, "# agent-seed = %u\n# init-seed = %u\n", agent_seed, init_seed);
 
   framework f(lunar_lander_simulator(),
               lunar_lander_agent(lambda, alpha_v, alpha_u, initial_value, num_features,
@@ -87,7 +87,7 @@ int main (int argc, char* argv[]) {
 
   for (int i = 0; i < num_episodes; i++) {
     if (visualize && i >= visualize_from) f.set_visualiser (i % visualize_every == 0 ? stdout : nullptr);
-    std::vector<double> rewards = f.run_episode(init_rng, agent_rng);
+    f.run_episode(init_rng, agent_rng);
     if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
     // std::printf("%g\n", f.time_elapsed);
   }

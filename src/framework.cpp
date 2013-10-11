@@ -81,38 +81,35 @@ void framework::take_action(lunar_lander_simulator::action a) {
 }
 
 
-std::vector<double> framework::run_episode(std::mt19937& init_rng,
-                                           std::mt19937& agent_rng) {
+void framework::run_episode(std::mt19937& init_rng, std::mt19937& agent_rng) {
 
   initialize_simulator(init_rng);
   take_action(agent.initialize(agent_rng, simulator_state()));
   send_visualiser_data();
 
-  time_elapsed = 0;
   _return = 0;
-  std::vector<double> rewards;
+  rewards.clear();
+  time_elapsed = 0;
 
-  while (true) {
-    for (int i = 0; i < agent_time_steps; ++i) {
-      if (simulator.get_landed() || simulator.get_crashed()) break;
+  bool terminal = false;
+
+  while (!terminal) {
+
+    for (int i = 0; i < agent_time_steps && !terminal; ++i) {
       simulator.update(dt);
       time_elapsed += dt;
       send_visualiser_data();
+      terminal = simulator.get_crashed() || simulator.get_landed();
     }
 
     double _reward = reward();
     _return += _reward;
     rewards.push_back(_reward);
 
-    bool terminal = simulator.get_crashed() || simulator.get_landed();
     take_action(agent.update(agent_rng, simulator_state(), _reward, terminal));
-
-    if (terminal) break;
   }
 
   if (visualiser) std::fflush (visualiser);
-
-  return rewards;
 }
 
 
