@@ -6,6 +6,8 @@
 #include <string>
 #include <sstream>
 #include <iterator>
+#include <regex>
+#include <iostream>
 
 #include "utility.hpp"
 #include "simulator.hpp"
@@ -48,8 +50,14 @@ int main (int argc, char* argv[]) {
     else if (std::string(argv[i]) == "--tile-weight-exponent") tile_weight_exponent = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--visualize") visualize = true;
     else if (std::string(argv[i]) == "--subspaces") {
-      std::istringstream arg (argv[++i]);
-      subspaces.assign (std::istream_iterator<int>(arg), std::istream_iterator<int>());
+      subspaces.clear();
+      std::istringstream arg(argv[++i]);
+      int dim;
+      char sep;
+      while (arg >> dim) {
+        subspaces.push_back(dim);
+        arg >> sep;
+      }
     }
     else {
       std::fprintf (stderr, "Unknown parameter: %s\n",argv[i]);
