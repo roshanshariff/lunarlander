@@ -36,6 +36,8 @@ int main (int argc, char* argv[]) {
   std::vector<int> subspaces { 0, 1, 2, 6 };
 
   bool visualize = false;
+  int visualize_from = 0;
+  int visualize_every = 1000;
 
   for (int i = 1; i < argc; ++i) {
     if (std::string(argv[i]) == "--dt") dt = std::atof(argv[++i]);
@@ -49,6 +51,8 @@ int main (int argc, char* argv[]) {
     else if (std::string(argv[i]) == "--no-trunc-normal") trunc_normal = false;
     else if (std::string(argv[i]) == "--tile-weight-exponent") tile_weight_exponent = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--visualize") visualize = true;
+    else if (std::string(argv[i]) == "--visualize-from") visualize_from = std::atoi(argv[++i]);
+    else if (std::string(argv[i]) == "--visualize-every") visualize_every = std::atoi(argv[++i]);
     else if (std::string(argv[i]) == "--subspaces") {
       subspaces.clear();
       std::istringstream arg(argv[++i]);
@@ -75,7 +79,7 @@ int main (int argc, char* argv[]) {
               agent_time_steps);
 
   for (int i = 0; i < num_episodes; i++) {
-    if (visualize) f.set_visualiser (i % 1000 == 0 ? stdout : 0);
+    if (visualize && i >= visualize_from) f.set_visualiser (i % visualize_every == 0 ? stdout : nullptr);
     std::vector<double> rewards = f.run_episode(init_rng, agent_rng);
     if (!visualize) std::fprintf(stdout, "%g\n", f.get_return());
     // std::printf("%g\n", f.time_elapsed);
