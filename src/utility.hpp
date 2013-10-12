@@ -10,7 +10,7 @@
 
 inline double norm_pdf(double x) {
   using namespace std;
-  return exp(-pow(x/2, 2)) / sqrt(2*boost::math::constants::pi<double>());
+  return exp(-x*x/2.0) / sqrt(2*boost::math::constants::pi<double>());
 }
 
 inline double norm_cdf(double x) {
