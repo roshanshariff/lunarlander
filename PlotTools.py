@@ -24,18 +24,25 @@ def load_directory(directory):
         yield (basename, load_results(pattern))
 
 def aggregate_results(results):
-    results_sum = results.cumsum(axis=1)
-    results_mean = results_sum.mean(axis=0)
-    results_stderr = results_sum.std(axis=0) / np.sqrt(float(results.shape[0]))
-    return (results_mean, results_stderr)
+    nresults = np.size(results, axis=0)
+    results_mean = results.mean(axis=0)
+    results_stderr = results.std(axis=0) / np.sqrt(float(nresults))
+    cumresults_stderr = results.cumsum(axis=1).std(axis=0) / np.sqrt(float(nresults))
+    return (results_mean, results_stderr, cumresults_stderr)
 
-def plot_results(results, label,  above=False):
-    (mean, stderr) = aggregate_results(results)
-    plt.fill_between(np.arange(results.shape[1]), mean+2*stderr, mean-2*stderr,
+def summarize_directory (directory, output_directory=None):
+    if output_directory is None: output_directory = directory
+    for (name, results) in load_directory(directory):
+        np.savetxt (os.path.join(output_directory, '{}.txt'.format(name)),
+                    np.array(aggregate_results(results)).T,
+                    header='{} ({} runs)'.format(name, np.size(results, axis=0)))
+
+def plot_results(mean, stderr, label,  above=False):
+    plt.fill_between(np.arange(mean.size), mean+2*stderr, mean-2*stderr,
                      color='moccasin', edgecolor='moccasin')
     plt.plot(mean, color='black', lw=2)
 
-    xposition = results.shape[1] - 20
+    xposition = mean.size - 20
     if above:
         yposition = mean[xposition] + 2.5*stderr[xposition]
         va = 'bottom'
