@@ -5,16 +5,19 @@ import os
 import re
 
 def load_results(file_name):
-    run_number = 0
     results = []
     while True:
         try:
-            results.append(np.loadtxt(file_name.format(run_number)))
-            run_number += 1
+            results.append(np.loadtxt(file_name.format(len(results))))
         except IOError:
             break
-    print("Loaded {} runs".format(run_number))
-    return np.array(results)
+    min_episodes = min(result.size for result in results)
+    max_episodes = max(result.size for result in results)
+    if min_episodes != max_episodes:
+        print('WARNING: number of episodes varies between {} and {}'.format(min_episodes, max_episodes))
+        results = [result[:min_episodes] for result in results]
+    print("Loaded {} runs".format(len(results)))
+    return np.vstack(results)
 
 def load_directory(directory):
     for pathname in glob.iglob (os.path.join(directory, "*-0.txt")):
