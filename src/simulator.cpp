@@ -199,6 +199,7 @@ void lunar_lander_simulator::initialize(double pos_x, double pos_y, double vel_x
   lander.reset_breakage();
 
   crashed = false;
+  landed = false;
   current_action = action();
 
   update(0.0);
