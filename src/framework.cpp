@@ -31,10 +31,10 @@ double framework::reward() {
     }
   }
 
-  if (!simulator.get_landed()) {
+  //if (!simulator.get_landed()) {
     reward -= std::log10 (1 + simulator.get_lander().get_breakage());
     simulator.get_lander().reset_breakage();
-  }
+    //}
 
   return reward;
 }
