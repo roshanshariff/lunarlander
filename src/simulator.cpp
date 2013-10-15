@@ -213,9 +213,17 @@ void lunar_lander_simulator::update(double dt) {
   Vector2d accel = Eigen::Rotation2Dd (lander.get_rot()) * Vector2d (0, current_action.thrust);
   accel.y() -= GRAVITY;
   lander.update(dt, accel*lander.get_mass(), current_action.rcs*lander.get_mom_inertia());
-  crashed |= lander.get_breakage() > 1.0;
-  landed = lander.get_colliders()[0].contacted && lander.get_colliders()[1].contacted &&
-    lander.get_vel().norm() < 1;
+
+  if (!crashed) {
+    if (lander.get_breakage() > 1) {
+      crashed = true;
+    }
+    else if (lander.get_colliders()[0].contacted && lander.get_colliders()[1].contacted) {
+      double ground_vel = lander.get_vel().norm();
+      if (ground_vel > 1) crashed = true;
+      else if (ground_vel < 0.5) landed = true;
+    }
+  }
 }
 
 void lunar_lander_simulator::set_action(const action& new_action) {
