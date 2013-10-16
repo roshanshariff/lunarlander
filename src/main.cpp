@@ -14,6 +14,11 @@
 #include "lunar_lander_agent.hpp"
 #include "framework.hpp"
 
+double scaled_alpha (double lambda, double alpha_factor) {
+  return alpha_factor * (1 - lambda);
+}
+
+
 int main (int argc, char* argv[]) {
 
   std::random_device rdev;
@@ -49,6 +54,8 @@ int main (int argc, char* argv[]) {
     else if (std::string(argv[i]) == "--lambda") lambda = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--alpha-v") alpha_v = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--alpha-u") alpha_u = std::atof(argv[++i]);
+    else if (std::string(argv[i]) == "--scaled-alpha-u") alpha_u = scaled_alpha (lambda, std::atof(argv[++i]));
+    else if (std::string(argv[i]) == "--scaled-alpha-v") alpha_v = scaled_alpha (lambda, std::atof(argv[++i]));
     else if (std::string(argv[i]) == "--initial-value") initial_value = std::atof(argv[++i]);
     else if (std::string(argv[i]) == "--trunc-normal") trunc_normal = true;
     else if (std::string(argv[i]) == "--no-trunc-normal") trunc_normal = false;
