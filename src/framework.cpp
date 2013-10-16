@@ -46,7 +46,7 @@ void framework::initialize_simulator(std::mt19937& rng) {
   typedef std::normal_distribution<double> normal;
   const double PI = boost::math::constants::pi<double>();
 
-  double rotation = normal(0, PI/6)(rng);
+  double rotation = normal(0, PI/8)(rng);
   simulator.get_lander().set_rot(rotation);
 
   double xpos = uniform(-1.25*agent.get_max_state()(0), 1.25*agent.get_max_state()(0))(rng);
