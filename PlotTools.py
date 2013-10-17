@@ -1,9 +1,20 @@
+import collections
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import os
 import re
 import shutil
+
+def count_results(directory):
+    counts = collections.defaultdict(int)
+    for pathname in glob.iglob (os.path.join(directory, "*.txt")):
+        matches = re.findall(r"(.*)-([0-9]+).txt", os.path.basename(pathname))
+        if matches: 
+            (name, number) = matches[0]
+            counts[name] += 1
+    for (name,count) in counts.items():
+        print count, name
 
 def load_results(file_name, max_failures=1):
     results = []
@@ -33,7 +44,7 @@ def load_directory(directory, max_failures=1):
         pattern = re.sub (r'^(.*-)0(\.txt)$', r'\1{}\2', pathname)
         (basename,) = re.findall (r'^(.*)-0.txt', os.path.basename(pathname), flags=re.I)
         print ("Loading {}".format(basename))
-        yield (basename, load_results(pattern), max_failures)
+        yield (basename, load_results(pattern, max_failures))
 
 def aggregate_results(results):
     nresults = np.size(results, axis=0)
