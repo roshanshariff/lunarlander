@@ -14,7 +14,7 @@ def count_results(directory):
             (name, number) = matches[0]
             counts[name] += 1
     for (name,count) in counts.items():
-        print count, name
+        print("{} {}".format(count,name))
 
 def load_results(file_name, max_failures=1):
     results = []
