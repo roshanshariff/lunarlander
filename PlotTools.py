@@ -3,14 +3,16 @@ import matplotlib.pyplot as plt
 import glob
 import os
 import re
+import shutil
 
-def load_results(file_name):
+def load_results(file_name, max_failures=1):
     results = []
-    while True:
+    failures = 0
+    while failures < max_failures:
         try:
             results.append(np.loadtxt(file_name.format(len(results))))
         except IOError:
-            break
+            failures += 1
     min_episodes = min(result.size for result in results)
     max_episodes = max(result.size for result in results)
     if min_episodes != max_episodes:
@@ -18,6 +20,13 @@ def load_results(file_name):
         results = [result[:min_episodes] for result in results]
     print("Loaded {} runs".format(len(results)))
     return np.vstack(results)
+
+def renumber_results(directory, offset):
+    for pathname in glob.iglob (os.path.join(directory, "*.txt")):
+        matches = re.findall(r"(.*-)([0-9])+.txt", pathname)
+        if matches: 
+            (name, number) = matches[0]
+            shutil.move(pathname, name + str(int(number)+offset) + ".txt")
 
 def load_directory(directory):
     for pathname in glob.iglob (os.path.join(directory, "*-0.txt")):
