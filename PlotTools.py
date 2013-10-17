@@ -23,17 +23,17 @@ def load_results(file_name, max_failures=1):
 
 def renumber_results(directory, offset):
     for pathname in glob.iglob (os.path.join(directory, "*.txt")):
-        matches = re.findall(r"(.*-)([0-9])+.txt", pathname)
+        matches = re.findall(r"(.*-)([0-9]+).txt", pathname)
         if matches: 
             (name, number) = matches[0]
             shutil.move(pathname, name + str(int(number)+offset) + ".txt")
 
-def load_directory(directory):
+def load_directory(directory, max_failures=1):
     for pathname in glob.iglob (os.path.join(directory, "*-0.txt")):
         pattern = re.sub (r'^(.*-)0(\.txt)$', r'\1{}\2', pathname)
         (basename,) = re.findall (r'^(.*)-0.txt', os.path.basename(pathname), flags=re.I)
         print ("Loading {}".format(basename))
-        yield (basename, load_results(pattern))
+        yield (basename, load_results(pattern), max_failures)
 
 def aggregate_results(results):
     nresults = np.size(results, axis=0)
