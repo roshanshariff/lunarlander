@@ -219,7 +219,7 @@ void lunar_lander_simulator::update(double dt) {
       crashed = true;
     }
     else if (lander.get_colliders()[0].contacted && lander.get_colliders()[1].contacted) {
-      double ground_vel = lander.get_vel().norm();
+      double ground_vel = std::abs(lander.get_vel()(0));
       if (ground_vel > 1) crashed = true;
       else if (ground_vel < 0.5) landed = true;
     }
