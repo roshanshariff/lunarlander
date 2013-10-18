@@ -1,27 +1,35 @@
 import collections
 import numpy as np
+import pickle
 import matplotlib.pyplot as plt
 import glob
 import os
 import re
 import shutil
 
-def count_results(directory):
+def count_results(fileglob):
     counts = collections.defaultdict(int)
-    for pathname in glob.iglob (os.path.join(directory, "*.txt")):
+    for pathname in glob.iglob (fileglob):
         matches = re.findall(r"(.*)-([0-9]+).txt", os.path.basename(pathname))
-        if matches: 
+        if matches:
             (name, number) = matches[0]
             counts[name] += 1
     for (name,count) in counts.items():
         print("{} {}".format(count,name))
 
-def load_results(file_name, max_failures=1):
+def renumber_results(fileglob, offset):
+    for pathname in glob.iglob (fileglob):
+        matches = re.findall(r"(.*-)([0-9]+).txt", pathname)
+        if matches:
+            (name, number) = matches[0]
+            shutil.move(pathname, name + str(int(number)+offset) + ".txt")
+
+def load_results(file_name, max_failures=50):
     results = []
     failures = 0
     while failures < max_failures:
         try:
-            results.append(np.loadtxt(file_name.format(len(results))))
+            results.append(np.loadtxt(file_name.format(len(results)+failures)))
         except IOError:
             failures += 1
     min_episodes = min(result.size for result in results)
@@ -32,14 +40,23 @@ def load_results(file_name, max_failures=1):
     print("Loaded {} runs".format(len(results)))
     return np.vstack(results)
 
-def renumber_results(directory, offset):
-    for pathname in glob.iglob (os.path.join(directory, "*.txt")):
-        matches = re.findall(r"(.*-)([0-9]+).txt", pathname)
-        if matches: 
-            (name, number) = matches[0]
-            shutil.move(pathname, name + str(int(number)+offset) + ".txt")
+def load_param_study(fileglob, output_file, param_names):
+    pattern = '-'.join(r'{}=(.*)'.format(p) for p in param_names) + '.txt'
+    param_values = collections.defaultdict(list)
+    param_data = {}
+    for pathname in glob.iglob (fileglob):
+        matches = re.findall(pattern, os.path.basename(pathname))
+        if matches:
+            print ('Loading file {}'.format(pathname))
+            key = tuple(float(v) for v in matches[0])
+            data = np.loadtxt(pathname)
+            param_data[key] = data
+            for (name, value) in zip(param_names, key): param_values[name].append(value)
+    param_values = { name: np.unique(values) for (name, values) in param_values.items() }
+    with open(output_file, 'wb') as out:
+        pickle.dump ({'param_names': param_names, 'param_values': param_values, 'data': param_data}, out)
 
-def load_directory(directory, max_failures=1):
+def load_directory(directory, max_failures=30):
     for pathname in glob.iglob (os.path.join(directory, "*-0.txt")):
         pattern = re.sub (r'^(.*-)0(\.txt)$', r'\1{}\2', pathname)
         (basename,) = re.findall (r'^(.*)-0.txt', os.path.basename(pathname), flags=re.I)
