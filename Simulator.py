@@ -2,18 +2,6 @@ import numpy as np
 import math
 
 
-class Collider:
-
-    def __init__ (self, pos, normal_dir, strength, shear):
-        self.pos = np.array(pos, dtype=np.float64)
-        self.mu_s = float(mu_s)
-        self.mu_k = float(mu_k)
-        cos_dir = math.cos(normal_dir)
-        sin_dir = math.sin(normal_dir)
-        self.strength = np.matrix([[ cos_dir/strength, sin_dir/strength],
-                                   [-sin_dir/shear,    cos_dir/shear   ]])        
-
-
 class RigidBody:
 
     def __init__ (self, mass, mom_inertia, mu_s=0.0, mu_k=0.0, restitution=0.0, colliders=[]):
@@ -46,6 +34,9 @@ class RigidBody:
 
         if new_pos[1] > self.bounding_radius: return False
 
+        cos_new_rot = math.cos(new_rot)
+        sin_new_rot = math.sin(new_rot)
+        rot_matrix = np.array ([[cos_new_rot, -sin_new_rot], [sin_new_rot, cos_new_rot]])
         rot_matrix = np.empty ((2,2))
         rot_matrix[0,0] = math.cos (new_rot)
         rot_matrix[1,0] = math.sin (new_rot)
@@ -71,8 +62,7 @@ class RigidBody:
             impulse = np.linalg.solve(K, [-collider_vel[0], -(1+restitution)*collider_vel[1]])
 
             if abs(impulse[0]) > self.mu_s*impulse[1]:
-                friction = self.mu_k
-                if collider_vel[0] > 0: friction = -friction
+                friction = -self.mu_k if collider_vel[0] > 0 else self.mu_k
                 impulse[1] = -(1+restitution) * collider_vel[1] / (friction*K[1,0] + K[1,1])
                 impulse[0] = impulse[1] * friction
 
@@ -116,7 +106,7 @@ class RigidBody:
             if not self.process_collisions ((i-9)/10.0, colliders_dpos_dtheta,
                                             new_pos, new_rot, self.contacted):
                 break
-        
+
         # Position update
         self.pos += dt * self.vel
         self.rot += dt * self.rot_vel
@@ -165,12 +155,12 @@ class LunarLanderSimulator:
             cos_dir = math.cos(strut_dir)
             sin_dir = math.sin(strut_dir)
             strength_mat = np.matrix([[ cos_dir/strength, sin_dir/strength],
-                                      [-sin_dir/shear,    cos_dir/shear   ]])        
+                                      [-sin_dir/shear,    cos_dir/shear   ]])
             return (image_coords(x,y), strength_mat)
 
         def body (x, y):
             return (image_coords(x,y), np.eye(2))
-        
+
         self.lander = RigidBody (mass, mom_inertia, mu_s, mu_k, restitution,
                                  [ leg  (0.0541, 0.0456, math.pi/6),   # left leg bottom
                                    leg  (0.9459, 0.0456, math.pi*5/6), # right leg bottom
@@ -221,7 +211,7 @@ class LunarLanderSimulator:
 
         #print self.lander.impulses[:,0] + self.lander.impulses[:,1]
         #if self.crashed: print self.lander.breakage
-        
+
     def set_action (self, thrust, rcs):
         self.thrust = max (0, min (self.max_thrust, thrust))
         self.rcs = max (-self.max_rcs, min (self.max_rcs, rcs))
@@ -231,4 +221,3 @@ class LunarLanderSimulator:
 
     def rcs_throttle (self):
         return self.rcs / self.max_rcs
-
