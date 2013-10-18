@@ -60,7 +60,7 @@ bool rigid_body::process_collisions (const double restitution, const Vector2d& n
       K += Matrix2d::Identity() / mass;
     }
 
-    Vector2d impulse = K.llt().solve (Vector2d (collider_vel.x(), -(1+restitution)*collider_vel.y()));
+    Vector2d impulse = K.llt().solve (Vector2d (-collider_vel.x(), -(1+restitution)*collider_vel.y()));
 
     if (std::abs (impulse.x()) > mu_s*impulse.y()) {
       const double friction = collider_vel.x() > 0 ? -mu_k : mu_k;
