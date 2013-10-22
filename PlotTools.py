@@ -43,7 +43,7 @@ def load_results(file_name, max_failures=50):
     print("Loaded {} runs".format(len(results)))
     return np.vstack(results)
 
-def load_param_study(fileglob, output_file, param_names):
+def load_param_study(fileglob, param_names, output_file=None):
     pattern = '-'.join(r'{}=(.*)'.format(p) for p in param_names) + '.txt'
     param_values = collections.defaultdict(list)
     param_data = {}
@@ -56,8 +56,10 @@ def load_param_study(fileglob, output_file, param_names):
             param_data[key] = data
             for (name, value) in zip(param_names, key): param_values[name].append(value)
     param_values = { name: np.unique(values) for (name, values) in param_values.items() }
-    with open(output_file, 'wb') as out:
-        pickle.dump ({'param_names': param_names, 'param_values': param_values, 'data': param_data}, out)
+    if output_file:
+        with open(output_file, 'wb') as out:
+            pickle.dump ({'param_names': param_names, 'param_values': param_values, 'data': param_data}, out)
+    return (param_names, param_values, param_data)
 
 def load_directory(directory, max_failures=30):
     for pathname in glob.iglob (os.path.join(directory, "*-0.txt")):
