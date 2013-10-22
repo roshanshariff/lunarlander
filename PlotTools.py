@@ -7,6 +7,9 @@ import os
 import re
 import shutil
 
+def smooth(data, window=100):
+    return np.convolve(data, np.ones(window)/window)
+
 def count_results(fileglob):
     counts = collections.defaultdict(int)
     for pathname in glob.iglob (fileglob):
