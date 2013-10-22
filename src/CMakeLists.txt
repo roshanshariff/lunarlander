@@ -30,7 +30,7 @@ target_link_libraries (main ${Boost_LIBRARIES})
 set (CMAKE_BUILD_TYPE Release)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-   add_definitions ("-std=c++11 -Werror -Wno-unused-local-typedefs -Wall -Wextra -march=native -mno-avx -O3")
+   add_definitions ("-std=c++11 -Werror -Wno-unused-local-typedefs -Wall -Wextra -mno-avx -O3")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
