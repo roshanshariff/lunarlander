@@ -16,6 +16,8 @@ add_executable (main main.cpp
                $<TARGET_OBJECTS:lib_framework>
                $<TARGET_OBJECTS:lib_utility>)
 
+add_executable (data_summarizer data_summarizer.cpp)
+
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/Modules/")
 
 find_package (Eigen3 REQUIRED)
