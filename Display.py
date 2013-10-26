@@ -8,8 +8,18 @@ from pyglet.clock import ClockDisplay
 import numpy as np
 import ctypes
 
+import Dice3DS
+import Dice3DS.example.config
+Dice3DS.example.config.OPENGL_PACKAGE = "PyOpenGL"
+Dice3DS.example.config.IMAGE_LOAD_PACKAGE = "PIL"
+from Dice3DS.example import gltexture, glmodel
+
+
 def numpy_to_ctype_array (array, dtype):
     return array.ctypes.data_as(ctypes.POINTER(dtype*array.size)).contents
+
+def float_ctype_array (*args):
+    return (ctypes.c_float * len(args))(*args)
 
 class LunarLanderWindow (pyglet.window.Window):
 
@@ -28,7 +38,7 @@ class LunarLanderWindow (pyglet.window.Window):
         self.load_resources()
 
         self.set_caption('Lunar Lander')
-        gl.glDisable(gl.GL_DEPTH_TEST)
+        gl.glEnable(gl.GL_DEPTH_TEST)
 
         self.fps_display = ClockDisplay()
 
@@ -85,6 +95,18 @@ class LunarLanderWindow (pyglet.window.Window):
                                    np.array([[0,0,1],[0,1,0],[-1,0,0]]).T, 30, self.simulator.rcs_spread,
                                    1000, 0.3, 0.25)
 
+        lem_textures = {}
+        with pyglet.resource.file('resources/273689main_lunarlandernofoil_c/textures/booster3.png') as texture:
+            lem_textures['BOOSTER3.TIF'] = gltexture.Texture(texture)
+        with pyglet.resource.file('resources/273689main_lunarlandernofoil_c/textures/texture_lem_flag.png') as texture:
+            lem_textures['TEXTURE_.TIF'] = gltexture.Texture(texture)
+        with pyglet.resource.file('resources/273689main_lunarlandernofoil_c/textures/texture_lem_unitedstates.png') as texture:
+            lem_textures['TEXTUREA.TIF'] = gltexture.Texture(texture)
+        with pyglet.resource.file('resources/273689main_lunarlandernofoil_c/lunarlandernofoil_carbajal.3ds') as lem_model_file:
+            lem_dom = Dice3DS.dom3ds.read_3ds_mem(lem_model_file.read())
+        self.lem_model = glmodel.GLModel (lem_dom, lambda tex: lem_textures[tex], nfunc=Dice3DS.util.calculate_normals_by_cross_product)
+        print(self.lem_model.bounding_box())
+
     def start (self, wait=0.0):
         pyglet.clock.unschedule (self.update)
         pyglet.clock.schedule_once (lambda _: pyglet.clock.schedule_interval (self.update, self.dt), wait)
@@ -123,8 +145,11 @@ class LunarLanderWindow (pyglet.window.Window):
 
     def on_draw (self):
 
+        gl.glDepthMask(gl.GL_TRUE)
         self.clear()
 
+        gl.glDepthMask(gl.GL_FALSE)
+        gl.glDepthFunc(gl.GL_ALWAYS)
         self.push_camera_projection()
         self.push_default_view()
 
@@ -139,11 +164,17 @@ class LunarLanderWindow (pyglet.window.Window):
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
         gl.glEnable (self.puff_texture.target)
         gl.glBindTexture (self.puff_texture.target, self.puff_texture.id)
-
         Thruster.draw(self.particles)
         gl.glDisable (self.puff_texture.target)
+        gl.glDisable (gl.GL_BLEND)
 
-        self.lander.draw()
+        #self.lander.draw()
+        gl.glDepthMask(gl.GL_TRUE)
+        gl.glDepthFunc(gl.GL_LESS)
+        self.draw_lem_model()
+        gl.glDepthMask(gl.GL_FALSE)
+        gl.glDepthFunc(gl.GL_ALWAYS)
+
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPopMatrix()
 
@@ -154,6 +185,29 @@ class LunarLanderWindow (pyglet.window.Window):
         if self.landed.visible: self.landed.draw()
 
         self.fps_display.draw()
+
+    def draw_lem_model (self):
+
+        # gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, gl.gl_float_array(1.0,1.0,10.0,0))
+
+        gl.glEnable(gl.GL_LIGHTING)
+        gl.glEnable(gl.GL_LIGHT0)
+        gl.glEnable(gl.GL_NORMALIZE)
+        gl.glShadeModel(gl.GL_SMOOTH)
+        gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, float_ctype_array(1.0, 1.0, 1.0, 1.0))
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_AMBIENT, float_ctype_array(0.0, 0.0, 0.0, 1.0))
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, float_ctype_array(1.0, 1.0, 1.0, 1.0))
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_SPECULAR, float_ctype_array(0.5, 0.5, 0.5, 1.0))
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, float_ctype_array(1.0, 1.0, 1.0, 0.0))
+        gl.glTranslatef(self.lander.x, self.lander.y, 0)
+        gl.glRotatef(self.lander.rotation, 0, 0, -1)
+
+        gl.glTranslatef(0, -3*self.scaleFactor, 0)
+        gl.glRotatef(8, 0, 1, 0)
+        gl.glRotatef(90, -1, 0, 0)
+        gl.glScalef(self.scaleFactor*1.4, self.scaleFactor*1.4, self.scaleFactor*1.4)
+        self.lem_model.render()
+        gl.glDisable(gl.GL_LIGHTING)
 
     def push_camera_projection (self):
 
@@ -177,7 +231,7 @@ class LunarLanderWindow (pyglet.window.Window):
 
         moon_radius = self.scaleFactor * 1.7371e6
         self.camera_near = self.camera_y / math.tan(self.fov_y/2.0)
-        self.camera_far = math.sqrt(2*moon_radius*self.camera_y)
+        self.camera_far = 500*self.scaleFactor #math.sqrt(2*moon_radius*self.camera_y)
 
         gl.glMatrixMode (gl.GL_PROJECTION)
         gl.glPushMatrix()
