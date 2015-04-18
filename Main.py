@@ -18,3 +18,6 @@ def manual_control ():
 def visualize ():
     import Display
     window = Display.LunarLanderWindow (framework)
+
+if __name__ == '__main__':
+    manual_control()

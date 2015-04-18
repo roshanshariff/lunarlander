@@ -1,8 +1,11 @@
+from __future__ import print_function
+
 import numpy as np
 import multiprocessing as mp
 import ctypes
 import math
 import sys
+
 
 class Framework:
 
@@ -45,7 +48,7 @@ class Framework:
         state += self.agent.min_state
         state[2:6] = 0.0
 
-        if np.random.randint(0,2): state[0] = -state[0]
+        if np.random.randint(0, 2): state[0] = -state[0]
         state[4] = np.random.normal (0.0, math.pi/8)
         # state[5] = np.random.normal (0.0, math.pi/16)
 
@@ -53,7 +56,8 @@ class Framework:
 
     def run (self, dt=float('inf'), learn=True):
 
-        if not self.initialized: self.initialize()
+        if not self.initialized:
+            self.initialize()
 
         while dt > 0.0:
 
@@ -73,7 +77,8 @@ class Framework:
                 self.agent_time += self.agent.dt
 
                 (state, xsign) = self.simulator_state()
-                if state[0] > 100.0: self.simulator.crashed = True
+                if state[0] > 100.0:
+                    self.simulator.crashed = True
                 terminal = self.simulator.crashed or self.simulator.landed
 
                 reward = self.reward()
@@ -105,7 +110,8 @@ class Framework:
         rot_vel = self.simulator.lander.rot_vel
         xsign = 1.0
 
-        if pos_x < 0: (xsign, pos_x, vel_x, rot, rot_vel) = (-xsign, -pos_x, -vel_x, -rot, -rot_vel)
+        if pos_x < 0:
+            (xsign, pos_x, vel_x, rot, rot_vel) = (-xsign, -pos_x, -vel_x, -rot, -rot_vel)
 
         state = np.array([abs(pos_x), pos_y, vel_x, vel_y, rot, rot_vel])
         return (state, xsign)
@@ -128,7 +134,9 @@ class Framework:
         return reward
 
     def train (self, num_procs=None):
-        if num_procs == None: num_procs = mp.cpu_count()
+        if num_procs is None:
+            num_procs = mp.cpu_count()
+
         def proc (seed):
             np.random.seed (seed)
             while True:
@@ -140,12 +148,15 @@ class Framework:
                     else:
                         break
                     self.counter.value += 1
-                if i%100 == 0:
-                    print i, 'Return =', self.returns[i]
+                if i % 100 == 0:
+                    print(i, 'Return =', self.returns[i])
 
-        procs = [ mp.Process (target=proc, args=(np.random.randint(sys.maxint),)) for i in xrange(num_procs) ]
+        procs = [mp.Process (target=proc, args=(np.random.randint(sys.maxint),)) for i in xrange(num_procs)]
         try:
-            for p in procs: p.start()
-            for p in procs: p.join()
+            for p in procs:
+                p.start()
+            for p in procs:
+                p.join()
         finally:
-            for p in procs: p.terminate()
+            for p in procs:
+                p.terminate()
