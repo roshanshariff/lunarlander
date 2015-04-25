@@ -4,7 +4,6 @@ import numpy as np
 import multiprocessing as mp
 import ctypes
 import math
-import sys
 
 
 class Framework:
@@ -48,7 +47,8 @@ class Framework:
         state += self.agent.min_state
         state[2:6] = 0.0
 
-        if np.random.randint(0, 2): state[0] = -state[0]
+        if np.random.randint(0, 2):
+            state[0] = -state[0]
         state[4] = np.random.normal (0.0, math.pi/8)
         # state[5] = np.random.normal (0.0, math.pi/16)
 
@@ -151,7 +151,7 @@ class Framework:
                 if i % 100 == 0:
                     print(i, 'Return =', self.returns[i])
 
-        procs = [mp.Process (target=proc, args=(np.random.randint(sys.maxint),)) for i in xrange(num_procs)]
+        procs = [mp.Process (target=proc, args=(None,)) for i in xrange(num_procs)]
         try:
             for p in procs:
                 p.start()

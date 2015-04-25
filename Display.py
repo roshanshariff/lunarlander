@@ -12,23 +12,16 @@ import os
 import Dice3DS
 import Dice3DS.example.config
 Dice3DS.example.config.OPENGL_PACKAGE = "PyOpenGL"
-Dice3DS.example.config.IMAGE_LOAD_PACKAGE = "PIL"
+Dice3DS.example.config.IMAGE_LOAD_PACKAGE = "pyglet"
 from Dice3DS.example import gltexture, glmodel
-
-
-def numpy_to_ctype_array (array, dtype):
-    return array.ctypes.data_as(ctypes.POINTER(dtype*array.size)).contents
-
-
-def float_ctype_array (*args):
-    return (ctypes.c_float * len(args))(*args)
 
 
 class LunarLanderWindow (pyglet.window.Window):
 
     def __init__ (self, framework, fov_diag=math.radians(46.8)):
 
-        super(LunarLanderWindow, self).__init__(resizable=True, visible=False)
+        super(LunarLanderWindow, self).__init__(resizable=True, visible=False,
+                                                config=gl.Config(double_buffer=True, depth_size=24, stencil_size=1))
 
         self.framework = framework
         self.push_handlers (framework.agent)
@@ -41,8 +34,6 @@ class LunarLanderWindow (pyglet.window.Window):
         self.load_resources()
 
         self.set_caption('Lunar Lander')
-        gl.glEnable(gl.GL_DEPTH_TEST)
-
         self.fps_display = ClockDisplay()
 
         self.set_visible (True)
@@ -52,21 +43,22 @@ class LunarLanderWindow (pyglet.window.Window):
 
     def load_resources (self):
 
+        pyglet.resource.path.append(os.path.realpath('resources'))
+        pyglet.resource.reindex()
+
         lander_width = self.scaleFactor * self.simulator.lander_width
 
-        pyglet.resource.path.append(os.path.realpath('./resources'))
+        # lander_img = pyglet.resource.image('lander.png')
+        # lander_img.anchor_x = lander_img.width*self.simulator.image_center[0]
+        # lander_img.anchor_y = lander_img.height*self.simulator.image_center[1]
+        # self.lander = pyglet.sprite.Sprite(lander_img)
+        # self.lander.scale = lander_width/lander_img.width
 
-        lander_img = pyglet.resource.image('lander.png')
-        lander_img.anchor_x = lander_img.width*self.simulator.image_center[0]
-        lander_img.anchor_y = lander_img.height*self.simulator.image_center[1]
-        self.lander = pyglet.sprite.Sprite(lander_img)
-        self.lander.scale = lander_width/lander_img.width
-
-        shadow_img = pyglet.resource.image('shadow-texture.png')
-        shadow_img.anchor_x = shadow_img.width * 0.5
-        shadow_img.anchor_y = shadow_img.height * 0.5
-        self.shadow = pyglet.sprite.Sprite(shadow_img, x=0, y=0)
-        self.shadow.scale = 5*lander_width/shadow_img.width
+        # shadow_img = pyglet.resource.image('shadow-texture.png')
+        # shadow_img.anchor_x = shadow_img.width * 0.5
+        # shadow_img.anchor_y = shadow_img.height * 0.5
+        # self.shadow = pyglet.sprite.Sprite(shadow_img, x=0, y=0)
+        # self.shadow.scale = 5*lander_width/shadow_img.width
 
         target_img = pyglet.resource.image('target.png')
         target_img.anchor_x = target_img.width * 0.5
@@ -74,16 +66,12 @@ class LunarLanderWindow (pyglet.window.Window):
         self.target = pyglet.sprite.Sprite(target_img, x=0, y=0)
         self.target.scale = 2.0*lander_width/target_img.width
 
-        ground_img = pyglet.resource.image('moon_light.jpg')
-        self.ground_tex = ground_img.get_image_data().get_mipmapped_texture()
+        self.ground_tex = pyglet.resource.texture('moon_light.jpg').get_image_data().get_mipmapped_texture()
 
         self.crashed = pyglet.text.Label (text='CRASH', font_size=100, bold=True,
                                           color=(255, 0, 0, 255), anchor_x='center', anchor_y='top')
-        self.crashed.visible = False
-
         self.landed = pyglet.text.Label (text='LANDED', font_size=100, bold=True,
                                          color=(255, 255, 255, 255), anchor_x='center', anchor_y='top')
-        self.landed.visible = False
 
         self.puff_texture = pyglet.resource.texture('puff.png')
         self.particles = Thruster.make_domain()
@@ -100,18 +88,25 @@ class LunarLanderWindow (pyglet.window.Window):
                                    np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]).T, 30, self.simulator.rcs_spread,
                                    1000, 0.3, 0.25)
 
-        lem_textures = {}
-        with pyglet.resource.file('273689main_lunarlandernofoil_c/textures/booster3.png') as texture:
-            lem_textures['BOOSTER3.TIF'] = gltexture.Texture(texture)
-        with pyglet.resource.file('273689main_lunarlandernofoil_c/textures/texture_lem_flag.png') as texture:
-            lem_textures['TEXTURE_.TIF'] = gltexture.Texture(texture)
-        with pyglet.resource.file('273689main_lunarlandernofoil_c/textures/texture_lem_unitedstates.png') as texture:
-            lem_textures['TEXTUREA.TIF'] = gltexture.Texture(texture)
-        with pyglet.resource.file('273689main_lunarlandernofoil_c/lunarlandernofoil_carbajal.3ds') as lem_model_file:
+        lem_model_dir = 'lunarlandernofoil_c'
+
+        with pyglet.resource.file(os.path.join(lem_model_dir, 'lunarlandernofoil_carbajal.3ds')) as lem_model_file:
             lem_dom = Dice3DS.dom3ds.read_3ds_mem(lem_model_file.read())
 
-        self.lem_model = glmodel.GLModel (lem_dom, lem_textures.get, nfunc=Dice3DS.util.calculate_normals_by_cross_product)
-        print(self.lem_model.bounding_box())
+        def load_lem_texture (filename):
+            filename = os.path.splitext(filename)[0] + '.png'
+            print("Loading {}".format(filename))
+            with pyglet.resource.file(os.path.join(lem_model_dir, filename)) as tex:
+                return gltexture.Texture(tex)
+
+        self.lem_model = glmodel.GLModel (lem_dom, load_lem_texture,
+                                          nfunc=Dice3DS.util.calculate_normals_by_cross_product)
+
+        # for m in self.lem_model.meshes:
+        #     if m.matarrays:
+        #         for (material, faces) in m.matarrays:
+        #             if material.texture:
+        #                 print(material.texture.real)
 
     def start (self, wait=0.0):
         pyglet.clock.unschedule (self.update)
@@ -125,13 +120,9 @@ class LunarLanderWindow (pyglet.window.Window):
 
         self.update_particles()
 
-        (self.lander.x, self.lander.y) = self.scaleFactor*self.simulator.lander.pos
-        self.lander.rotation = -math.degrees(self.simulator.lander.rot)
-
-        self.shadow.x = self.lander.x
-
-        self.crashed.visible = self.simulator.crashed
-        self.landed.visible = self.simulator.landed
+        # (self.lander.x, self.lander.y) = self.scaleFactor*self.simulator.lander.pos
+        # self.lander.rotation = -math.degrees(self.simulator.lander.rot)
+        # self.shadow.x = self.lander.x
 
     def update_particles (self):
 
@@ -152,88 +143,84 @@ class LunarLanderWindow (pyglet.window.Window):
     def on_draw (self):
 
         gl.glDepthMask(gl.GL_TRUE)
-        self.clear()
-
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT | gl.GL_STENCIL_BUFFER_BIT)
         gl.glDepthMask(gl.GL_FALSE)
-        gl.glDepthFunc(gl.GL_ALWAYS)
-        self.push_camera_projection()
-        self.push_default_view()
 
-        self.push_ground_view()
-        self.draw_ground_plane()
-        self.target.draw()
-        # self.shadow.draw()
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPopMatrix()
+        with push_matrix(gl.GL_PROJECTION):
+            self.set_camera_projection()
 
-        gl.glPushMatrix()
-        gl.glMultTransposeMatrixf(float_ctype_array(1.0, -1.0, 0.0, 0.0,
-                                                    0.0, 0.0, 0.0, 0.0,
-                                                    0.0, 0.0, 1.0, 0.0,
-                                                    0.0, 0.0, 0.0, 1.0))
-        self.draw_shadow_lem()
-        gl.glPopMatrix()
+            with push_matrix(gl.GL_MODELVIEW):
+                gl.glLoadIdentity()
+                gl.gluLookAt (self.camera_x, self.camera_y, self.camera_z,
+                              self.camera_x, self.camera_y, 0.0,
+                              0.0, 1.0, 0.0)
 
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
-        gl.glEnable (self.puff_texture.target)
-        gl.glBindTexture (self.puff_texture.target, self.puff_texture.id)
-        Thruster.draw(self.particles)
-        gl.glDisable (self.puff_texture.target)
-        gl.glDisable (gl.GL_BLEND)
+                with push_matrix(gl.GL_MODELVIEW):
+                    gl.gluLookAt(0, 0, 0, 0, -1, 0, 0, 0, -1)
+                    self.draw_ground_plane()
+                    self.target.draw()
+                    # self.shadow.draw()
 
-        # self.lander.draw()
-        gl.glDepthMask(gl.GL_TRUE)
-        gl.glDepthFunc(gl.GL_LESS)
-        self.draw_lem()
-        gl.glDepthMask(gl.GL_FALSE)
-        gl.glDepthFunc(gl.GL_ALWAYS)
+                self.draw_shadow_lem()
+                self.draw_lem()
 
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPopMatrix()
+                with push_attrib(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT):
+                    gl.glEnable(gl.GL_BLEND)
+                    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
+                    gl.glEnable(gl.GL_DEPTH_TEST)
+                    with bound_texture (self.puff_texture.target, self.puff_texture.id):
+                        Thruster.draw(self.particles)
 
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
-
-        if self.crashed.visible:
+        if self.simulator.crashed:
             self.crashed.draw()
-        if self.landed.visible:
+        if self.simulator.landed:
             self.landed.draw()
 
         self.fps_display.draw()
 
     def draw_lem (self):
-        gl.glEnable(gl.GL_LIGHTING)
-        gl.glEnable(gl.GL_LIGHT0)
-        gl.glEnable(gl.GL_NORMALIZE)
-        gl.glShadeModel(gl.GL_SMOOTH)
-        gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, float_ctype_array(1.0, 1.0, 1.0, 1.0))
-        gl.glLightfv(gl.GL_LIGHT0, gl.GL_AMBIENT, float_ctype_array(0.0, 0.0, 0.0, 1.0))
-        gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, float_ctype_array(1.0, 1.0, 1.0, 1.0))
-        gl.glLightfv(gl.GL_LIGHT0, gl.GL_SPECULAR, float_ctype_array(0.5, 0.5, 0.5, 1.0))
-        gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, float_ctype_array(1.0, 1.0, 1.0, 0.0))
-        self.draw_lem_model()
-        gl.glDisable(gl.GL_LIGHT0)
-        gl.glDisable(gl.GL_LIGHTING)
+        with push_attrib(gl.GL_DEPTH_BUFFER_BIT | gl.GL_LIGHTING_BIT):
+            gl.glDepthMask(gl.GL_TRUE)
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            gl.glEnable(gl.GL_LIGHTING)
+            gl.glEnable(gl.GL_LIGHT0)
+            gl.glEnable(gl.GL_NORMALIZE)
+            gl.glShadeModel(gl.GL_SMOOTH)
+            gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, float_ctype_array(1.0, 1.0, 1.0, 1.0))
+            gl.glLightfv(gl.GL_LIGHT0, gl.GL_AMBIENT, float_ctype_array(0.0, 0.0, 0.0, 1.0))
+            gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, float_ctype_array(1.0, 1.0, 1.0, 1.0))
+            gl.glLightfv(gl.GL_LIGHT0, gl.GL_SPECULAR, float_ctype_array(0.5, 0.5, 0.5, 1.0))
+            gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, float_ctype_array(1.0, 1.0, 1.0, 0.0))
+            self.draw_lem_model()
 
     def draw_shadow_lem (self):
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        self.draw_lem_model()
-        gl.glDisable(gl.GL_BLEND)
+        with push_attrib(gl.GL_STENCIL_BUFFER_BIT | gl.GL_COLOR_BUFFER_BIT):
+            gl.glStencilFunc(gl.GL_NOTEQUAL, 1, 1)
+            gl.glStencilOp(gl.GL_KEEP, gl.GL_KEEP, gl.GL_REPLACE)
+            gl.glEnable(gl.GL_STENCIL_TEST)
+            gl.glEnable(gl.GL_BLEND)
+            gl.glBlendFunc(gl.GL_ZERO, gl.GL_CONSTANT_ALPHA)
+            gl.glBlendColor(1.0, 1.0, 1.0, 0.3)
+            with push_matrix(gl.GL_MODELVIEW):
+                gl.glMultTransposeMatrixf(float_ctype_array(1.0, -1.0, 0.0, 0.0,
+                                                            0.0, 0.0, 0.0, 0.0,
+                                                            0.0, 0.0, 1.0, 0.0,
+                                                            0.0, 0.0, 0.0, 1.0))
+                self.draw_lem_model()
 
     def draw_lem_model (self):
-        gl.glTranslatef(self.lander.x, self.lander.y, 0)
-        gl.glRotatef(self.lander.rotation, 0, 0, -1)
-        gl.glScalef(*[self.scaleFactor]*3)
+        with push_matrix(gl.GL_MODELVIEW):
+            gl.glTranslatef(*np.append(self.scaleFactor*self.simulator.lander.pos, 0))
+            gl.glRotatef(-math.degrees(self.simulator.lander.rot), 0, 0, -1)
+            gl.glScalef(*[self.scaleFactor]*3)
 
-        gl.glTranslatef(0, -3, 0)
-        gl.glRotatef(8, 0, 1, 0)
-        gl.glRotatef(90, -1, 0, 0)
-        gl.glScalef(*[2**0.5]*3)
-        self.lem_model.render()
+            gl.glTranslatef(0, -3, 0)
+            gl.glRotatef(0, 0, 1, 0)
+            gl.glRotatef(90, -1, 0, 0)
+            gl.glScalef(*[2**0.5]*3)
+            self.lem_model.render()
 
-    def push_camera_projection (self):
+    def set_camera_projection (self):
 
         lander_width = self.scaleFactor * self.simulator.lander_width
         lander_height = self.scaleFactor * -self.simulator.lander.colliders['pos'][1].min()
@@ -255,25 +242,12 @@ class LunarLanderWindow (pyglet.window.Window):
 
         moon_radius = self.scaleFactor * 1.7371e6
         self.camera_near = self.camera_y / math.tan(self.fov_y/2.0)
-        self.camera_far = 500*self.scaleFactor  # math.sqrt(2*moon_radius*self.camera_y)
+        # self.camera_far = 500*self.scaleFactor
+        self.camera_far = math.sqrt(2*moon_radius*self.camera_y)
 
-        gl.glMatrixMode (gl.GL_PROJECTION)
-        gl.glPushMatrix()
         gl.glLoadIdentity()
         gl.gluPerspective (math.degrees(self.fov_y), self.display_width/self.display_height,
                            self.camera_near, self.camera_far)
-
-    def push_default_view (self):
-        gl.glMatrixMode (gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.gluLookAt (self.camera_x, self.camera_y, self.camera_z,
-                      self.camera_x, self.camera_y, 0.0,
-                      0.0, 1.0, 0.0)
-
-    def push_ground_view (self):
-        gl.glMatrixMode (gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.gluLookAt(0, 0, 0, 0, -1, 0, 0, 0, -1)
 
     def draw_ground_plane (self):
 
@@ -285,24 +259,16 @@ class LunarLanderWindow (pyglet.window.Window):
 
         coords = (x-wnear, znear, x+wnear, znear, x+wfar, zfar, x-wfar, zfar)
 
-        gl.glEnable (self.ground_tex.target)
-        gl.glBindTexture (self.ground_tex.target, self.ground_tex.id)
-        gl.glMatrixMode(gl.GL_TEXTURE)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-        gl.glTranslated(0.5, 0.5, 0)
-        gl.glScaled(1.0/(200*self.scaleFactor), 1.0/(200*self.scaleFactor), 0.0)
-        pyglet.graphics.draw (4, gl.GL_QUADS, ('v2f', coords), ('t2f', coords))
-        gl.glPopMatrix()
-        gl.glBindTexture (self.ground_tex.target, 0)
-        gl.glDisable (self.ground_tex.target)
+        with push_matrix(gl.GL_TEXTURE):
+            gl.glLoadIdentity()
+            gl.glTranslated(0.5, 0.5, 0)
+            gl.glScaled(1.0/(200*self.scaleFactor), 1.0/(200*self.scaleFactor), 0.0)
+            with bound_texture(self.ground_tex.target, self.ground_tex.id):
+                pyglet.graphics.draw (4, gl.GL_QUADS, ('v2f', coords), ('t2f', coords))
 
     def on_resize (self, width, height):
 
-        gl.glViewport(0, 0, width, height)
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        gl.glOrtho(0, width, 0, height, -1, 1)
+        super(LunarLanderWindow, self).on_resize(width, height)
 
         diag = 2.0 * math.tan(self.fov_diag/2.0) / math.hypot(width, height)
         self.fov_x = 2.0 * math.atan (width*diag/2.0)
@@ -424,7 +390,7 @@ class UserAgent (pyglet.window.key.KeyStateHandler):
     def __init__ (self, simulator):
         super(UserAgent, self).__init__()
         self.simulator = simulator
-        self.dt = 0.5  # simulator.dt
+        self.dt = simulator.dt
         self.max_state = np.array([30.0, 20.0, 5.0, 5.0, 1000, 5])
         self.min_state = np.array([0.0, 0.0, -5.0, -5.0, 1000, -5])
 
@@ -435,4 +401,57 @@ class UserAgent (pyglet.window.key.KeyStateHandler):
         thrust = self.simulator.max_thrust if self[key.W] else 0.0
         left = self.simulator.max_rcs if self[key.A] else 0.0
         right = self.simulator.max_rcs if self[key.D] else 0.0
+        if self.simulator.lander.pos[0] < 0:
+            (left, right) = (right, left)
         return (thrust, left-right)
+
+
+def numpy_to_ctype_array (array, dtype):
+    return array.ctypes.data_as(ctypes.POINTER(dtype*array.size)).contents
+
+
+def float_ctype_array (*args):
+    return (ctypes.c_float * len(args))(*args)
+
+
+class push_matrix (object):
+
+    def __init__ (self, matrix_mode):
+        self.matrix_mode = matrix_mode
+
+    def __enter__ (self):
+        gl.glPushAttrib(gl.GL_TRANSFORM_BIT)
+        gl.glMatrixMode(self.matrix_mode)
+        gl.glPushMatrix()
+
+    def __exit__ (self, type, value, traceback):
+        gl.glMatrixMode(self.matrix_mode)
+        gl.glPopMatrix()
+        gl.glPopAttrib()
+
+
+class push_attrib (object):
+
+    def __init__ (self, mask):
+        self.mask = mask
+
+    def __enter__ (self):
+        gl.glPushAttrib(self.mask)
+
+    def __exit__ (self, type, value, traceback):
+        gl.glPopAttrib()
+
+
+class bound_texture (object):
+
+    def __init__ (self, target, id):
+        self.target = target
+        self.id = id
+
+    def __enter__ (self):
+        gl.glPushAttrib(gl.GL_ENABLE_BIT | gl.GL_TEXTURE_BIT)
+        gl.glEnable(self.target)
+        gl.glBindTexture(self.target, self.id)
+
+    def __exit__ (self, type, value, traceback):
+        gl.glPopAttrib()
