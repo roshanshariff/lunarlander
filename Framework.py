@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import (division, print_function)
 
 import numpy as np
 import multiprocessing as mp
@@ -121,7 +121,7 @@ class Framework:
         self.simulator.set_action (thrust, xsign*rcs)
 
     def reward (self):
-        reward = 0.0
+        reward = -0.01 * self.simulator.main_throttle()
         if self.simulator.crashed or self.simulator.landed:
             reward -= abs(self.simulator.lander.pos[0]) / self.simulator.lander_width
             if self.simulator.landed:
@@ -130,7 +130,6 @@ class Framework:
             reward -= math.log10 (1.0 + self.simulator.lander.breakage)
             self.simulator.lander.breakage = 0.0
 
-        reward -= 0.01 * self.simulator.main_throttle()
         return reward
 
     def train (self, num_procs=None):

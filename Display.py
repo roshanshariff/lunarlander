@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import (division, print_function)
 
 import math
 import pyglet
@@ -112,9 +112,14 @@ class LunarLanderWindow (pyglet.window.Window):
         pyglet.clock.unschedule (self.update)
         pyglet.clock.schedule_once (lambda _: pyglet.clock.schedule_interval (self.update, self.dt), wait)
 
-    def update (self, _):
+    def update (self, dt):
 
-        if not self.framework.run(self.dt, learn=False):
+        print('Updating: {} s'.format(dt))
+
+        if dt > self.dt:
+            dt = self.dt
+
+        if not self.framework.run(dt, learn=False):
             print ('Return = {}'.format(self.framework.Return))
             self.start(1.0)
 

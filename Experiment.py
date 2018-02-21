@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import (division, print_function)
+
 import numpy as np
 import os
 import sys
@@ -14,7 +16,7 @@ def run_experiment(Lambda, alpha, twe, trunc_normal, subspaces, num_runs,num_epi
     returns = np.empty((num_runs, num_episodes), dtype=np.float64)
     results.append(returns)
     for i in xrange(num_runs):
-        print name
+        print(name)
         agent = PolicyGradientAgent (simulator, 
                                      Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
                                      tile_weight_exponent=twe,
