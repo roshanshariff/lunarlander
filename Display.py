@@ -94,7 +94,7 @@ class LunarLanderWindow (pyglet.window.Window):
             lem_dom = Dice3DS.dom3ds.read_3ds_mem(lem_model_file.read())
 
         def load_lem_texture (filename):
-            filename = os.path.splitext(filename)[0] + '.png'
+            filename = os.path.splitext(filename.decode("utf-8"))[0] + '.png'
             print("Loading {}".format(filename))
             with pyglet.resource.file(os.path.join(lem_model_dir, filename)) as tex:
                 return gltexture.Texture(tex)
@@ -114,7 +114,7 @@ class LunarLanderWindow (pyglet.window.Window):
 
     def update (self, dt):
 
-        print('Updating: {} s'.format(dt))
+        # print('Updating: {} s'.format(dt))
 
         if dt > self.dt:
             dt = self.dt

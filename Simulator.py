@@ -2,7 +2,6 @@ from __future__ import (division, print_function)
 
 import numpy as np
 import math
-import six
 
 
 class RigidBody:
