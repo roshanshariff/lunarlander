@@ -3,8 +3,7 @@ from __future__ import (division, print_function)
 import math
 import pyglet
 import pyglet.gl as gl
-from pyglet.window import key
-from pyglet.clock import ClockDisplay
+from pyglet.window import key, FPSDisplay
 import numpy as np
 import ctypes
 import os
@@ -34,7 +33,7 @@ class LunarLanderWindow (pyglet.window.Window):
         self.load_resources()
 
         self.set_caption('Lunar Lander')
-        self.fps_display = ClockDisplay()
+        self.fps_display = FPSDisplay(self)
 
         self.set_visible (True)
         self.start()
@@ -43,7 +42,7 @@ class LunarLanderWindow (pyglet.window.Window):
 
     def load_resources (self):
 
-        pyglet.resource.path.append(os.path.realpath('resources'))
+        pyglet.resource.path = ['@{}.resources'.format(__package__)]
         pyglet.resource.reindex()
 
         lander_width = self.scaleFactor * self.simulator.lander_width
@@ -95,7 +94,6 @@ class LunarLanderWindow (pyglet.window.Window):
 
         def load_lem_texture (filename):
             filename = os.path.splitext(filename.decode("utf-8"))[0] + '.png'
-            print("Loading {}".format(filename))
             with pyglet.resource.file(os.path.join(lem_model_dir, filename)) as tex:
                 return gltexture.Texture(tex)
 
@@ -120,7 +118,6 @@ class LunarLanderWindow (pyglet.window.Window):
             dt = self.dt
 
         if not self.framework.run(dt, learn=False):
-            print ('Return = {}'.format(self.framework.Return))
             self.start(1.0)
 
         self.update_particles()
@@ -398,6 +395,7 @@ class UserAgent (pyglet.window.key.KeyStateHandler):
         self.dt = simulator.dt
         self.max_state = np.array([30.0, 20.0, 5.0, 5.0, 1000, 5])
         self.min_state = np.array([0.0, 0.0, -5.0, -5.0, 1000, -5])
+        self.Return = 0.0
 
     def initialize (self, state):
         return (0.0, 0.0)
@@ -408,6 +406,10 @@ class UserAgent (pyglet.window.key.KeyStateHandler):
         right = self.simulator.max_rcs if self[key.D] else 0.0
         if self.simulator.lander.pos[0] < 0:
             (left, right) = (right, left)
+        self.Return += reward
+        if terminal:
+            print ('Return = {}'.format(self.Return))
+            self.Return = 0.0
         return (thrust, left-right)
 
 

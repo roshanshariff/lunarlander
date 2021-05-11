@@ -14,7 +14,7 @@ class TileCoder:
         def subspace_generator ():
             space_dim = len(tile_size)
             for subspace_dim in subspace_dims:
-                for ixs in itertools.combinations (xrange(0,space_dim), subspace_dim):
+                for ixs in itertools.combinations (range(0,space_dim), subspace_dim):
                     ixs = np.array (ixs, dtype=np.intp)
                     tilings = self.num_offsets.take(ixs)
                     num_tilings = tilings.prod()
@@ -25,7 +25,7 @@ class TileCoder:
         self.active_features = sum (subspace_tilings)
 
         def repeat_for_tilings (iterable):
-            return itertools.chain.from_iterable (itertools.imap (itertools.repeat, iterable, subspace_tilings))
+            return itertools.chain.from_iterable (map (itertools.repeat, iterable, subspace_tilings))
 
         tiles_in_tiling = list(repeat_for_tilings ([ self.num_tiles.take(s[0]).prod() for s in self.subspaces ]))
         self.num_features = sum (tiles_in_tiling)
@@ -99,10 +99,10 @@ class OldTileCoder:
 
         space_dim = len(cell_size)
 
-        subspaces = itertools.imap (
+        subspaces = map (
             lambda s: np.array(s, dtype=np.int32),
             itertools.chain.from_iterable(
-                [ itertools.combinations (range(0, space_dim), dim)
+                [ itertools.combinations (list(range(0, space_dim)), dim)
                   for dim in subspace_dims ]))
 
         self.tilings = []
@@ -117,7 +117,7 @@ class OldTileCoder:
             subspace_samples = np.ones_like (num_samples)
             subspace_samples[subspace] = num_samples[subspace]
 
-            for offset in itertools.product(*[xrange(0, n) for n in subspace_samples]):
+            for offset in itertools.product(*[range(0, n) for n in subspace_samples]):
 
                 tiling = self.Tiling (cell_size, subspace_cells, cell_size*offset/subspace_samples)
                 self.tilings.append (tiling)
@@ -145,7 +145,7 @@ class TravisTileCoder: # 18
             # Precompute the multiplications required to ravel the index
             self.strides = np.empty((1,self.num_cells.shape[1]))
             stride = 1
-            for i in reversed(xrange(self.strides.shape[1])):
+            for i in reversed(range(self.strides.shape[1])):
                 self.strides[0,i] = stride
                 stride *= self.num_cells[0,i]
 
@@ -168,7 +168,7 @@ class TravisTileCoder: # 18
 
         space_dim = len(cell_size)
 
-        subspaces = itertools.imap (
+        subspaces = map (
             lambda s: np.array(s, dtype=np.int32),
             itertools.chain.from_iterable(
                 [ itertools.combinations (range(0, space_dim), dim)
@@ -186,7 +186,7 @@ class TravisTileCoder: # 18
             subspace_samples[subspace] = num_samples[subspace]
             
             offsets = [cell_size * offset / subspace_samples for offset in 
-                       itertools.product(*[xrange(n) for n in subspace_samples])]
+                       itertools.product(*[range(n) for n in subspace_samples])]
             multi_tiling = self.MultiTiling(cell_size, subspace_cells, offsets)
 
             self.multi_tilings.append(multi_tiling)
@@ -198,7 +198,7 @@ class TravisTileCoder: # 18
         offset = 0
         i = 0
         for mt in self.multi_tilings:
-            for n in xrange(0,mt.num_tilings):
+            for n in range(0,mt.num_tilings):
                 self.ix_offsets[i] = offset
                 offset += mt.tiles_per_tiling
                 i += 1
@@ -231,15 +231,15 @@ def test_tile_coder (tc, trials):
     oldtc = OldTileCoder (tc.tile_size, tc.num_tiles, tc.num_offsets, tc.subspace_dims)
     travistc = TravisTileCoder (tc.tile_size, tc.num_tiles, tc.num_offsets, tc.subspace_dims)
     max_state = tc.tile_size * tc.num_tiles
-    for i in xrange(trials):
+    for i in range(trials):
         state = max_state * np.random.random(max_state.shape)
         features0 = tc.indices(state)
         features1 = oldtc.indices(state)
         features2 = travistc.indices(state)
         if not np.all(features0 == features1):
-            print 'Mismatch on Test 1'
+            print('Mismatch on Test 1')
             break
         if not np.all(features0 == features2):
-            print 'Mismatch on Test 2'
+            print('Mismatch on Test 2')
             break
-    print 'Completed'
+    print('Completed')

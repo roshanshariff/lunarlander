@@ -1,16 +1,15 @@
 import numpy as np
 
-from Framework import Framework
-from Simulator import LunarLanderSimulator
-from PolicyGradientAgent import PolicyGradientAgent
+from lunarlander.framework import Framework
+from lunarlander.simulator import LunarLanderSimulator
+from lunarlander.policygradientagent import PolicyGradientAgent
 
 simulator = LunarLanderSimulator()
 
 def make_framework (Lambda):
     agent = PolicyGradientAgent (simulator, Lambda=Lambda)
     filename = 'data/saved_state_lambda'+str(Lambda)+'.npy'
-    agent.save_state (filename)
-    agent.load_state (filename, mmap_mode='r+')
+    agent.persist_state (filename)
     return Framework (simulator, agent)
 
 lambdas = [ 0.0, 0.5, 0.75, 0.9 ]

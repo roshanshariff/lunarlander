@@ -5,10 +5,10 @@ import numpy as np
 import collections
 import ctypes
 import multiprocessing as mp
-import scipy.weave as weave
 import scipy.stats as stats
+import numba
 
-from TileCoder import TileCoder, HashingTileCoder
+from .tilecoder import TileCoder, HashingTileCoder
 
 class PolicyGradientAgent:
 
@@ -118,15 +118,19 @@ class PolicyGradientAgent:
     def load_state (self, savefile='data/saved_state.npy', mmap_mode=None):
         state = np.array (np.load (savefile, mmap_mode), copy=False)
         self.set_state(state)
+        return state
 
-    def persist_state(self, savefile=None, readonly=False):
-        if savefile == None:
-            state = np.frombuffer(mp.RawArray(ctypes.c_double, 5*self.tile_coder.num_features))
-            state[:] = self.get_state().flat
-            self.set_state(state)
+    def share_state(self, filename=None, readonly=False):
+        if filename is None:
+            state = self.get_state()
+            buf = mp.RawArray(ctypes.c_double, state.size)
+            shared_state = np.frombuffer(buf)
+            shared_state.flat = state
+            self.set_state(shared_state)
+            return buf
         else:
             if not readonly: self.save_state(savefile)
-            self.load_state (savefile, mmap_mode='r' if readonly else 'r+')
+            return self.load_state (savefile, mmap_mode='r' if readonly else 'r+')
 
 class Critic:
 
@@ -153,9 +157,10 @@ class Critic:
         self.features = new_features
         return td_error
 
+
 class PolicyGradientActor:
 
-    def __init__ (self, tile_coder, Lambda, alpha, min_action, max_action, min_sigma, max_sigma, initial_mu, initial_sigma, gamma=1.0, 
+    def __init__ (self, tile_coder, Lambda, alpha, min_action, max_action, min_sigma, max_sigma, initial_mu, initial_sigma, gamma=1.0,
                   trunc_normal=True):
 
         self.alpha = alpha
@@ -164,7 +169,7 @@ class PolicyGradientActor:
         self.min_sigma = min_sigma
         self.sigma_range = max_sigma - min_sigma
 
-        initial_sigma_value = math.log((initial_sigma-self.min_sigma)/(max_sigma-initial_sigma)) 
+        initial_sigma_value = math.log((initial_sigma-self.min_sigma)/(max_sigma-initial_sigma))
 
         self.mu = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_mu)
         self.sigma = LinearFunctionApprox (tile_coder, gamma*Lambda, initial_sigma_value)
@@ -185,7 +190,8 @@ class PolicyGradientActor:
         min_mu = self.min_action - 3.0*sigma
         mu = min (max (min_mu, mu), max_mu)
 
-        if not self.trunc_normal: return (float('-inf'), float('inf'), mu, sigma)
+        if not self.trunc_normal:
+            return (float('-inf'), float('inf'), mu, sigma)
 
         alpha = (self.min_action - mu) / sigma
         beta = (self.max_action - mu) / sigma
@@ -193,7 +199,7 @@ class PolicyGradientActor:
 
     def act(self, features):
         self.features = features
-        if self.trunc_normal: 
+        if self.trunc_normal:
             self.action = stats.truncnorm.rvs(*self.action_dist())
         else:
             self.action = np.random.normal(*self.action_dist()[2:])
@@ -207,7 +213,8 @@ class PolicyGradientActor:
             trunc_weight = stats.norm.cdf(beta) - stats.norm.cdf(alpha)
             trunc_grad_mu = (stats.norm.pdf(beta) - stats.norm.pdf(alpha)) / trunc_weight
             trunc_grad_sigma = (beta*stats.norm.pdf(beta) - alpha*stats.norm.pdf(alpha)) / trunc_weight
-            if math.isnan(trunc_grad_sigma): trunc_grad_sigma = 0.0
+            if math.isnan(trunc_grad_sigma):
+                trunc_grad_sigma = 0.0
         else:
             trunc_grad_mu = 0.0
             trunc_grad_sigma = 0.0
@@ -229,27 +236,28 @@ class PolicyGradientActor:
     #      action_stdev = self.action_stdev.value (self.features)
     #      action_stdev = self.max_stdev * (1 + math.tanh(action_stdev/2)) / 2
     #      return (action_mean, action_stdev)
-
+    #
     # def old_act (self, features):
     #     self.features = features
     #     self.action = np.random.normal(*self.action_dist())
     #     return self.action
-        
+    #
     # def old_learn (self, td_error):
-
+    #
     #     (action_mean, action_stdev) = self.action_dist()
     #     std_action = (self.action - action_mean) / action_stdev
-
+    #
     #     action_mean_gradient = std_action / action_stdev
     #     self.action_mean.add_features (self.features, action_mean_gradient)
-
+    #
     #     #action_stdev_gradient = self.max_stdev*(std_action**2 - 1)*(1-action_stdev)
     #     action_stdev_gradient = (std_action**2 - 1)*(1 - action_stdev/self.max_stdev)
     #     self.action_stdev.add_features (self.features, action_stdev_gradient)
-
+    #
     #     scaled_alpha = self.alpha * action_stdev**2
     #     self.action_mean.update (scaled_alpha*td_error)
     #     self.action_stdev.update (scaled_alpha*td_error)
+
 
 class LinearFunctionApprox:
 
@@ -269,35 +277,30 @@ class LinearFunctionApprox:
     #     return np.dot (self.weights.take(features), self.feature_weights)
 
     def value (self, features):
-        feature_weights = self.feature_weights
-        weights = self.weights
-        code = """
-            double value = 0.0;
-            for (int i = 0; i < features.size(); ++i) {
-                value += weights(features(i)) * feature_weights(i);
-            }
-            return_val = value; 
-        """
-        names = [ 'features', 'feature_weights', 'weights' ]
-        return weave.inline (code, names, type_converters=weave.converters.blitz)
+        return self.value_impl(self.feature_weights, self.weights, features)
+
+    @staticmethod
+    @numba.jit(nopython=True)
+    def value_impl (feature_weights, weights, features):
+        value = 0.0
+        for i in range(features.shape[0]):
+            value += weights[features[i]] * feature_weights[i]
+        return value
 
     def add_features (self, features, scaling=1.0):
         self.trace.appendleft ((features, scaling))
 
     def update (self, step_size):
-        feature_weights = self.feature_weights
-        weights = self.weights
-        code = """
-            double amount = double(step_size) * double(scaling);
-            for (int i = 0; i < features.size(); ++i) {
-                weights(features(i)) += amount * feature_weights(i);
-            }
-        """
-        names = [ 'step_size', 'feature_weights', 'weights', 'features', 'scaling' ]
-        falloff = self.falloff
         for (features, scaling) in self.trace:
-            weave.inline (code, names, type_converters=weave.converters.blitz)
-            step_size *= falloff
+            amount = step_size * scaling
+            self.update_impl(self.feature_weights, self.weights, features, amount)
+            step_size *= self.falloff
+
+    @staticmethod
+    @numba.jit(nopython=True)
+    def update_impl (feature_weights, weights, features, amount):
+        for i in range(features.shape[0]):
+            weights[features[i]] += amount * feature_weights[i]
 
 
 class EligibilityTrace:
@@ -317,21 +320,17 @@ class EligibilityTrace:
         self.ix = (self.ix + 1) % self.length
 
     def add_to_vector (self, vec, value):
-        weights = self.weights
-        features = self.features
-        feature_weights = self.feature_weights
-        length, num_features = features.shape
-        weave.inline ("""
-            for (int i = 0; i < length; i++) {
-                double amount = double(weights(i)) * double(value);
-                for (int j = 0; j < num_features; j++) {
-                    vec(features(i,j)) += amount * double(feature_weights(j));
-                }
-            }
-        """, locals().keys(), type_converters=weave.converters.blitz)
+        self.add_to_vector_impl(self.feature_weights, self.weights, self.features, vec, value)
+        
+    @staticmethod
+    @numba.jit(nopython=True)
+    def add_to_vector_impl(feature_weights, weights, features, vec, value):
+        for i in range(features.shape[0]):
+            amount = weights[i] * value
+            for j in range(features.shape[1]):
+                vec[features[i, j]] += amount * feature_weights[j]
 
     def clear (self):
         self.weights.fill(0.0)
         self.features.fill(0)
         self.ix = 0
-

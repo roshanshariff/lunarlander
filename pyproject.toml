@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "lunarlander"
+version = "0.1.0"
+description = "Lunar lander inspired environment for reinforcement learning with continuous states and actions."
+authors = ["Roshan Shariff <roshan.shariff@ualberta.ca>", "Travis Dick <tbd@seas.upenn.edu>"]
+license = "GPL3"
+
+[tool.poetry.scripts]
+lunarlander = "lunarlander.__main__:app"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<3.10"
+numpy = "^1.20.3"
+pyglet = "^1.5.16"
+scipy = "^1.6.3"
+numba = "^0.53.1"
+PyOpenGL = "^3.1.5"
+future = "^0.18.2"
+typer = "^0.3.2"
+matplotlib = "^3.4.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

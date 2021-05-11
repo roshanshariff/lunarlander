@@ -1,58 +1,64 @@
 #!/usr/bin/env python
 
-from __future__ import (division, print_function)
-
+from os import path,makedirs
 import numpy as np
-import os
-import sys
+import multiprocessing as mp
 
-from Framework import Framework
-from Simulator import LunarLanderSimulator
-from PolicyGradientAgent import PolicyGradientAgent
+from lunarlander.framework import Framework
+from lunarlander.simulator import LunarLanderSimulator
+from lunarlander.policygradientagent import PolicyGradientAgent
 
-simulator = LunarLanderSimulator()
+import matplotlib.pyplot as plt
 
-def run_experiment(Lambda, alpha, twe, trunc_normal, subspaces, num_runs,num_episodes=20000, num_procs=None,name=""):
-    returns = np.empty((num_runs, num_episodes), dtype=np.float64)
-    results.append(returns)
-    for i in xrange(num_runs):
-        print(name)
-        agent = PolicyGradientAgent (simulator, 
-                                     Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
-                                     tile_weight_exponent=twe,
-                                     trunc_normal=trunc_normal,
-                                     subspaces=subspaces)
-        agent.persist_state()
-        framework = Framework(simulator, agent, num_episodes=num_episodes)
-        framework.train(num_procs=num_procs)
-        returns[i] = framework.returns
-    random = np.random.randint(sys.maxsize)
+def run_experiment(num_episodes, Lambda, alpha, twe, trunc_normal, subspaces):
 
-    directory = 'data/%s/' % (name)
-    filename = directory + ('%d.npy' % (random))
-    try:
-        os.makedirs(directory)
-    except OSError:
-        pass
-    np.save (filename, returns)
-    return returns
+    np.random.seed()
+    
+    simulator = LunarLanderSimulator()
+    agent = PolicyGradientAgent (simulator,
+                                 Lambda=Lambda, alpha_u=alpha, alpha_v=alpha,
+                                 tile_weight_exponent=twe,
+                                 trunc_normal=trunc_normal,
+                                 subspaces=subspaces)
+    framework = Framework(simulator, agent)
 
-def make_plot():
-    for i,returns in enumerate(results):
-        plot(returns.mean(axis=0).cumsum(), label=r'$\lambda=%g,\alpha=%g,p=%g$'%params[i][:3])
-    legend (loc='lower left')
+    return np.array([framework.run_episode() for _ in range(num_episodes)])
 
-params = [
-    {'Lambda':0.75, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6], 'num_runs':1,
-     'num_episodes':20000, 'num_procs':2, 'name':"weighted_trunc_normal"},
-    {'Lambda':0.5, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6], 'num_runs':1,
-     'num_episodes':20000, 'num_procs':2, 'name':"lambda_0.5_weighted_trunc_normal"},
-    {'Lambda':0.9, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6], 'num_runs':1,
-     'num_episodes':20000, 'num_procs':2, 'name':"lambda_0.9_weighted_trunc_normal"}
-    ]
+
+def run_experiments(experiments):
+    ctx = mp.get_context('spawn')
+    with ctx.Pool() as pool:
+        promises = {name: [pool.apply_async(run_experiment, (ex['num_episodes'],), ex['params'])
+                           for _ in range(ex['num_runs'])]
+                    for (name, ex) in experiments.items()}
+        results = {name: np.vstack([p.get() for p in ps]) for (name, ps) in promises.items()}
+    return results
+        
+
+def make_plot(results):
+    for (name, returns) in results.items():
+        p = experiments[name]['params']
+        label = '\lambda={}, \alpha={}'.format(p['Lambda'], p['alpha'])
+        plt.plot(returns.mean(axis=0).cumsum(), label=label)
+    plt.legend (loc='lower left')
+    plt.show()
+
+experiments = {
+    'weighted_trunc_normal': {
+        'params': {'Lambda':0.75, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
+        'num_runs':3, 'num_episodes':20000
+    },
+    'lambda_0.5_weighted_trunc_normal': {
+        'params': {'Lambda':0.5, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
+        'num_runs':3, 'num_episodes':20000
+    },
+    'lambda_0.9_weighted_trunc_normal': {
+        'params': {'Lambda':0.9, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
+        'num_runs':3, 'num_episodes':20000
+    }
+}
 
 if __name__ == "__main__":
-    results = []
-    for ps in params:
-        run_experiment(**ps)
-    
+    results = run_experiments(experiments)
+    np.savez_compressed('data/experiment.npz', kwds=results)
+    make_plot(results)

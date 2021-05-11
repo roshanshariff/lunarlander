@@ -1,8 +1,8 @@
 import json
 import sys
 
-from Simulator import LunarLanderSimulator
-from Display import LunarLanderWindow
+from lunarlander.simulator import LunarLanderSimulator
+from lunarlander.display import LunarLanderWindow
 
 class Framework:
 
