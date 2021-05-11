@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from os import path,makedirs
+from os import path
 import numpy as np
 import multiprocessing as mp
 
@@ -38,11 +38,12 @@ def run_experiments(experiments):
 def make_plot(results):
     for (name, returns) in results.items():
         p = experiments[name]['params']
-        label = '\lambda={}, \alpha={}'.format(p['Lambda'], p['alpha'])
+        label = r'$\lambda={}, \alpha={}$'.format(p['Lambda'], p['alpha'])
         plt.plot(returns.mean(axis=0).cumsum(), label=label)
     plt.legend (loc='lower left')
     plt.show()
 
+    
 experiments = {
     'weighted_trunc_normal': {
         'params': {'Lambda':0.75, 'alpha':0.1, 'twe':0.5, 'trunc_normal':True, 'subspaces':[1,2,6]},
@@ -59,6 +60,10 @@ experiments = {
 }
 
 if __name__ == "__main__":
-    results = run_experiments(experiments)
-    np.savez_compressed('data/experiment.npz', kwds=results)
+    filename = 'data/experiment.npz'
+    if not path.exists(filename):
+        results = run_experiments(experiments)
+        np.savez_compressed(filename, **results)
+    else:
+        results = np.load(filename)
     make_plot(results)
